@@ -10,6 +10,7 @@ from scipy import stats as st
 from typing import Union
 
 import imutils
+import timeit
 
 
 def sequence_adapter(func):
@@ -523,9 +524,6 @@ def dynamic_hue(sequence, color, n_cycles, alpha):
     return output
 
 
-rita = cv2.imread("../unknown.png", 1)
-
-
 @SequenceModifiers.adder(
         'time clip',
         (float, 0, 100, 1, "Start 100%"),
@@ -874,11 +872,11 @@ def mask_area(sequence, pos, max_dist=5):
         (float, 0, 100, 1, "Frame position"),
         (float, 0, 50, 1, "Template size"),
         (int, 0, 100, 1, "Smoothing distance"),
-        (int, 0, 100, 1, "Keep value"),
+        # (int, 0, 100, 1, "Keep value"),
         (bool, 0, 1, 1, "Debug")
 )
 def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
-                           window_fraction=None, smoothing_frames=0, smooth_val=1, debug=False):
+                           window_fraction=None, smoothing_frames=0, debug=False):
     if offset_start is None:
         offset_start = 0, 0
     if offset_end is None:
@@ -896,7 +894,7 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
 
     posx, posy, template, window_size = track_template_in_sequence(
             sequence, offset_start, start_fr, window_fraction,
-            smoothing_frames, smooth_val,
+            smoothing_frames,
     )
 
     if debug:
@@ -941,9 +939,118 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
     return output
 
 
+def _conv_try(arr, radius):
+    """
+
+    Args:
+        arr:
+        radius:
+
+    Returns:
+
+    """
+    size = 1 + 2 * abs(radius)
+
+    left = np.zeros(radius)
+    right = np.zeros(radius)
+
+    if radius > 0:
+        csum = 0
+        for i, num in enumerate(arr[:radius * 2]):
+            csum += num
+            if i >= radius:
+                left[i - radius] = csum / (i + 1)
+
+        csum = 0
+        for i, num in enumerate(arr[:-radius * 2 - 1:-1]):
+            csum += num
+            if i >= radius:
+                right[i - radius] = csum / (i + 1)
+
+    return left, right
+
+
+def moving_average(array, radius=1, padding="try", kernel_type="avg", kernel_exp=2):
+    """
+
+    Args:
+        array:
+        radius:
+        padding:
+            full - extends results to padded numbers
+
+            same - calculates average for every number,  with 0
+
+            valid- returns only average number that can be calculated
+
+            try - calculates number using every value it has
+
+            keep - keep values that can not be calculated
+
+        kernel_type:
+            avg - pass
+
+            linear - pass
+            exp - pass
+
+        kernel_exp:
+            non linearity exponent
+
+    Returns:
+
+    """
+    smoothing_frames = 1 + 2 * abs(radius)
+    if smoothing_frames > len(array):
+        return array
+
+    if kernel_type == "avg":
+        kernel = np.ones(smoothing_frames) / smoothing_frames
+
+    elif kernel_type == "linear":
+        kernel = np.arange(radius + 1) + 1
+        kernel = np.concatenate([kernel[:-1], np.flip(kernel)])
+        kernel = kernel / kernel.sum()
+
+    else:
+        "Exponential"
+        kernel = np.arange(radius + 1) + 1
+        kernel = np.concatenate([kernel[:-1], np.flip(kernel)])
+        kernel = kernel ** kernel_exp
+        kernel = kernel / kernel.sum()
+
+    if padding == "same":
+        out = convolve(array, kernel, 'same')
+
+    elif padding == "try" or padding == 'keep':
+        out = convolve(array, kernel, 'valid')
+
+        if padding == "try":
+            left, right = _conv_try(array, radius)
+            # a, b, c = len(left), len(out), len(right)
+            # print(radius,a + b + c, a, b, c)
+            # print(f"\tKernel: {kernel.shape}")
+
+        else:
+            left = array[:radius]
+            right = array[-radius:]
+            # print(len(left), len(out), len(right))
+
+        out = np.concatenate([left, out, right])
+
+    elif padding == "full":
+        out = convolve(array, kernel, 'full')
+
+    else:
+        "valid"
+        out = convolve(array, kernel, 'valid')
+
+    # posx[:smoothing_frames] = tempx[:smoothing_frames]
+    return out
+
+
 def track_template_in_sequence(
         sequence, offset_start, start_fr, window_fraction,
-        smoothing_frames, smooth_val,
+        smoothing_radius,
 
 ):
     h, w, c = sequence[0].shape
@@ -973,23 +1080,14 @@ def track_template_in_sequence(
 
         posx.append(y)
         posy.append(x)
-    ind = 0
-    if smoothing_frames > 0:
-        smoothing_frames = 1 + 2 * smoothing_frames
-        kernel = np.ones(smoothing_frames)
-        kernel[len(kernel) // 2] = smooth_val
-        kernel = kernel / kernel.sum()
-        tempx = posx
-        tempy = posy
 
-        posx = convolve(posx, kernel, 'same')
-        posx[:smoothing_frames] = tempx[:smoothing_frames]
-
-        posy = convolve(posy, kernel, 'same')
-        posy[:smoothing_frames] = tempy[:smoothing_frames]
+    if type(smoothing_radius) is int and smoothing_radius > 0:
+        posx = moving_average(posx, radius=smoothing_radius, padding='try')
+        posy = moving_average(posy, radius=smoothing_radius, padding='try')
 
         posx = np.array(posx).round().astype(int)
         posy = np.array(posy).round().astype(int)
+
     return posx, posy, template, window_size
 
 
@@ -1077,18 +1175,29 @@ def max_image_size(sequence: Union[list, np.ndarray], max_height=400, max_width=
 
 
 if __name__ == "__main__":
-    sequence = sequence_sampler(rita, 'linear', 60)
-    sequence = cycle_slide_delay(sequence, 5, 2)
+    rita = cv2.imread("../unknown.png", 1)
 
-    # print(sequence[0].shape)
-    # plt.imshow(sequence[0])
-    # plt.show()
+    seq = np.random.random(15)
+    # seq = seq.reshape(5, 2).T.ravel()
 
-    ind = 0
-    while True:
-        img = sequence[ind]
-        cv2.imshow("jejej", img)
-        key = cv2.waitKey(50)
-        if key != -1:
-            break
-        ind = (ind + 1) % len(sequence)
+    # print(seq)
+    import matplotlib.pyplot as plt
+
+
+    plt.figure(dpi=100)
+    # plt.plot(seq, label="Orig")
+
+    for ker_typ in ["avg", "linear", "exp"]:
+        for rad in [2, 4]:
+            if ker_typ == "exp":
+                continue
+                for ex in [0.7, 1, 1.4, 2]:
+                    out = moving_average(seq, rad, kernel_type=ker_typ, kernel_exp=ex)
+                    plt.plot(out, label=f"{ker_typ} : {rad} : {ex}")
+            else:
+                out = moving_average(seq, rad, kernel_type=ker_typ)
+                plt.plot(out, label=f"{ker_typ} : {rad}")
+                print(len(out))
+
+    plt.legend()
+    plt.show()

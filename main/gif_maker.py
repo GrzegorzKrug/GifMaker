@@ -888,16 +888,6 @@ class GifClipApp(GuiBuilder):
             rad1.config()
             rad1.pack(side='top', anchor='c')
 
-        # def validate_spin():
-        #     val = int(var.get())
-        #     sp_val = int(sp.get())
-        #     print(f"Validating spinbox, display mode: {val}, spin: {sp_val}")
-        #     if val == 4:
-        #         return False
-        #     else:
-        #         return True
-
-
         sp = tk.Spinbox(
                 fr, from_=0, to=100,
                 # validate='all',
@@ -979,7 +969,7 @@ class GifClipApp(GuiBuilder):
         array = (
                 [
                         (tk.Label, dict(text="Duration [ms]")),
-                        (tk.Spinbox, dict(from_=10, to=150, textvariable=duration_var)),
+                        (tk.Spinbox, dict(from_=10, to=150, textvariable=duration_var, increment=5)),
                 ],
                 [
                         (tk.Label, dict(text="Transparent")),
@@ -1061,7 +1051,7 @@ def build_GifGui():
             ("Save project as", gui.save_project_as),
     ], name="Project")
     gui.add_menu([
-            # ("Export Gif", gui.export_as),
+            ("Export Gif", gui.export),
             ("Export Gif as", gui.export_as),
     ], name="Export")
 

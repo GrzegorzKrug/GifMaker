@@ -732,6 +732,7 @@ def convolve_pic(sequence, dist, kernel, allowed_channels):
         for ch_i in allowed_channels:
             channel = cur_frame[:, :, ch_i]
             new_ch = convolve2d(channel, kernel, 'same')
+            new_ch = np.clip(new_ch.round(), 0, 255).astype(np.uint8)
             frame[:, :, ch_i] = new_ch
 
         frame[mask_of_original_pixels] = cur_frame[mask_of_original_pixels]
@@ -851,6 +852,8 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel=0):
             new_ch = cv2.dilate(chan, kernel, iterations=repeat)
         else:
             new_ch = cv2.erode(chan, kernel, iterations=repeat)
+
+        new_ch = np.clip(new_ch.round(), 0, 255).astype(np.uint8)
 
         new_img = img.copy()
         new_img[:, :, channel] = new_ch
@@ -1050,7 +1053,7 @@ def moving_average(array, radius=1, padding="try", kernel_type="avg", kernel_exp
 
 def track_template_in_sequence(
         sequence, offset_start, start_fr, window_fraction,
-        smoothing_radius,
+        smoothing_radius, smooth_exp=0,
 
 ):
     h, w, c = sequence[0].shape
@@ -1058,7 +1061,7 @@ def track_template_in_sequence(
     point_start = (point_start * (w, h)).round().astype(int)
     inner_size = min([h, w])
     window_size = np.round(1 + 2 * (window_fraction * inner_size)).astype(int)
-    sample_ind = np.floor(len(sequence) * start_fr).astype(int)
+    sample_ind = np.floor(len(sequence) * start_fr / 100).astype(int)
     if sample_ind > len(sequence):
         sample_ind = len(sequence) - 1
 
@@ -1082,8 +1085,10 @@ def track_template_in_sequence(
         posy.append(x)
 
     if type(smoothing_radius) is int and smoothing_radius > 0:
-        posx = moving_average(posx, radius=smoothing_radius, padding='try')
-        posy = moving_average(posy, radius=smoothing_radius, padding='try')
+        posx = moving_average(posx, radius=smoothing_radius, padding='try',
+                              kernel_type='exp', kernel_exp=smooth_exp)
+        posy = moving_average(posy, radius=smoothing_radius, padding='try',
+                              kernel_type='exp', kernel_exp=smooth_exp)
 
         posx = np.array(posx).round().astype(int)
         posy = np.array(posy).round().astype(int)

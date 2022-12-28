@@ -58,10 +58,13 @@ def packing_replacer(func):
 
 class GuiBuilder(ABC):
     conf_path = "cgui.conf"
-    _projects = {}
+    cfg_extension = ".settings.cfg"
 
     GIF_TYPES = ((
             ('Gif', "*.gif"),
+    ))
+    CONFIG_TYPES = ((
+            ('config', "*.settings.cfg"),
     ))
     PIC_TYPES = ((
             ("Png Picture", "*.png"),
@@ -87,15 +90,15 @@ class GuiBuilder(ABC):
         self.root.title("Application")
         self.go_quit = False
 
-    @property
-    def projects(self):
-        return self._projects
+    # @property
+    # def projects(self):
+    #     return self._projects
 
-    @projects.setter
-    def projects(self, new_val):
-        if not isinstance(new_val, dict):
-            raise TypeError(f"Project settings should be dict type, not '{type(new_val)}'")
-        self._projects = new_val
+    # @projects.setter
+    # def projects(self, new_val):
+    #     if not isinstance(new_val, dict):
+    #         raise TypeError(f"Project settings should be dict type, not '{type(new_val)}'")
+    #     self._projects = new_val
 
     @abstractproperty
     def cur_project(self):
@@ -192,8 +195,10 @@ class GuiBuilder(ABC):
                 fr = tk.Frame(parent)
                 ref = ob(fr, *arg, **kw)
 
-                if ob in [tk.Button, tk.Frame, tk.Label, tk.LabelFrame, tk.Listbox, tk.Spinbox]:
+                if ob in [tk.Button, tk.Frame, tk.Label, tk.LabelFrame, tk.Listbox, tk.Spinbox,tk.Checkbutton]:
                     ref.pack(fill='both')
+
+                # print(f"Packing: {ob}")
 
                 fr.grid(row=ri, column=ci, **packing)
                 parent.grid_columnconfigure(ci, weight=1)
@@ -295,6 +300,20 @@ class GuiBuilder(ABC):
         ret = tk.simpledialog.askinteger(title, question)
         return ret
 
+    def ask_user_for_config_file(self):
+        ret = tk.filedialog.askopenfilename(
+                filetypes=self.CONFIG_TYPES,
+                initialdir=os.path.dirname(__file__)
+        )
+        return ret
+
+    def ask_user_for_save_config_file(self):
+        ret = tk.filedialog.asksaveasfilename(
+                filetypes=self.CONFIG_TYPES,
+                initialdir=os.path.dirname(__file__)
+        )
+        return ret
+
     @staticmethod
     def ask_user_for_string(title, question):
         ret = tk.simpledialog.askstring(title, question)
@@ -337,7 +356,7 @@ class GuiBuilder(ABC):
 
     @property
     def settings_path(self):
-        return os.path.abspath(f"{self.name}-settings.cfg")
+        return os.path.abspath(f"{self.name}{self.cfg_extension}")
 
     @property
     def name(self):
@@ -351,16 +370,19 @@ class GuiBuilder(ABC):
     def app_params(self, new_params):
         raise NotImplemented("Meta param")
 
-    def load_settings(self):
-        if not os.path.isfile(self.settings_path):
-            print(f"Not found config file: {self.settings_path}")
+    def load_settings(self, path=None):
+        if path is None:
+            path = self.settings_path
+
+        if not os.path.isfile(path):
+            print(f"Not found config file: {path}")
             return None
         else:
-            with open(self.settings_path, "rt") as fp:
+            with open(path, "rt") as fp:
                 try:
                     f = json.load(fp)
-                    params, projects = f
-                    print(f"Loaded settings - {self.settings_path}")
+                    params, last_project = f
+                    print(f"Loaded settings - {path}")
 
                 except json.JSONDecodeError as err:
                     print(f"Not loaded, Json error: {err}")
@@ -377,18 +399,16 @@ class GuiBuilder(ABC):
                     sys.exit(-1)
 
                 self.app_params = params
-                self.projects = projects
+                self.cur_project = last_project
 
-                if 'last' in self.projects:
-                    self.cur_project = self.projects['last']
+    def save_settings(self, path=None):
+        if path is None:
+            path = self.settings_path
 
-    def save_settings(self):
-        self._projects['last'] = self.cur_project
-
-        with open(self.settings_path, "wt") as fp:
-            js = json.dumps((self.app_params, self.projects), indent=2)
+        with open(path, "wt") as fp:
+            js = json.dumps((self.app_params, self.cur_project), indent=2)
             fp.write(js)
-            print(f"Saved settings - {self.settings_path}")
+            print(f"Saved settings - {path}")
 
     def quit(self):
         self.save_settings()

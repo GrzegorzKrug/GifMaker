@@ -15,6 +15,7 @@ class Layer:
 
         self.source_file_path = None
         self.pipeline_updates = pipe_update
+        self.has_changes = True
 
         if path:
             self.load_file(path)
@@ -29,6 +30,11 @@ class Layer:
     @property
     def serial_form(self):
         return self.source_file_path, self.filters_list, self.pipeline_updates
+
+    def clear_layer(self):
+        self.filters_list = []
+        self.has_changes = True
+        self.output_frames = []
 
     def load_file(self, path):
         path = os.path.abspath(path)
@@ -68,11 +74,12 @@ class Layer:
         elif ext == 'webp':
             sequence = read_webp(path)
             self.orig_frames = sequence
+
         elif ext == 'gif':
             sequence = read_gif(path)
-
             # sequence = ndimage.imread(path)
             self.orig_frames = sequence
+
         else:
             showerror("Error!", f"Unsupported file extension: {ext}")
             return None
@@ -91,15 +98,9 @@ class Layer:
         pic = cv2.imread(ph)
         pic = pic[:, :, [2, 1, 0]]
         self.orig_frames = [pic]
-        self.clip_arr = [0, 0, 0, 0]
 
         if new_pr:
-            self.last_project_name = None
-            self.filters_list = []
-            self.mod_pre_list = []
-            self.mod_post_list = []
-            self.run_single_update = True
-            self.running_update = False
+            self.clear_layer()
 
     def apply_mods(self):
         if not self.filters_list:

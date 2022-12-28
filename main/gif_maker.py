@@ -72,38 +72,33 @@ class GifClipApp(GuiBuilder):
 
     def __init__(self, height=900, width=1000, allow_load=True):
         super().__init__(height=height, width=width)
-        self.preview_frames_list = []
-        self.zoom = True
-        self.source_file_path = None
-        self.clip_arr = [0, 0, 0, 0]
-        self.duration_export = 35
-        self.last_export_path = None
-
-        self.output_frames = []
-        self.playback_position = 0
+        self.root.title("GifClip")
 
         "Run Flags"
         self.run_single_update = True
         self.running_update = False
         self.running_export = False
 
-        "Modifiers"
+        "Project"
         self.pipeline_mods_list = []
         self.layers_dict = {}
         self._next_layer_key = 0
+        self.pipeline_steps = []
 
-        self.root.title("GifClip")
-
-        "Non persistent"
-        self.last_save_path = None
-        self.last_project_name = None
-        self.export_duration = 40  # 40 ms
+        "UI Frames"
         self.status_label = LabelFrame()
         self.status_label_time = LabelFrame()
+        self.preview_frames_list = []
+
+        "Non persistent"
+        self.output_frames = []
         self.last_process_time = 0
+        self.active_layer = 0  # "For switching pictures"
         self.display_config = []
-        self.active_layer = 0
-        self.pipeline_steps = []
+        self.playback_position = 0
+        self.last_project_path = None
+        self.last_export_path = None
+        self.exp_settings = {}
 
         if allow_load:
             self.load_settings()
@@ -111,24 +106,26 @@ class GifClipApp(GuiBuilder):
         self.root.after(1000, self.update_display)
 
     def _clear_project(self):
-        raise NotImplemented
+        self.last_project_name = None
+        self.filters_list = []
+        self.mod_pre_list = []
+        self.mod_post_list = []
+        self.run_single_update = True
+        self.running_update = False
+        self.exp_settings = {}
 
-    def clear_sequence_mods(self):
+    def clear_pipe_mods(self):
         self.pipeline_steps = []
         self.pipeline_mods_list = []
         self.run_single_update = True
 
-    def clear_layer_mods(self, layer_key):
-        raise NotImplemented
+    # def clear_layer_mods(self, layer_key):
+    #     raise NotImplemented
 
     def clear_error(self):
         self.run_single_update = True
         self.running_update = False
         self.running_export = False
-
-    @property
-    def layers_serialize(self):
-        return {key: lay.serial_form for key, lay in self.layers_dict.items()}
 
     @property
     def app_params(self):
@@ -147,6 +144,10 @@ class GifClipApp(GuiBuilder):
             ) = new_params
         else:
             print("Could not load App params, does not match!")
+
+    @property
+    def layers_serialize(self):
+        return {key: lay.serial_form for key, lay in self.layers_dict.items()}
 
     @property
     def cur_project(self):
@@ -358,7 +359,7 @@ class GifClipApp(GuiBuilder):
             if new_pr:
                 self._next_layer_key = 0
                 self.layers_dict = {}
-                self.clear_sequence_mods()
+                self.clear_pipe_mods()
 
             if layer_key is None:
                 layer_key = self._next_layer_key
@@ -441,56 +442,27 @@ class GifClipApp(GuiBuilder):
         bt = Button(wn, text="Rest clips", command=reset_clips)
         bt.pack()
 
-    def clips_update(self, clip_index, new_val):
-        self.clip_arr[clip_index] = new_val
+    # def clips_update(self, clip_index, new_val):
+    #     self.clip_arr[clip_index] = new_val
 
     def load_project(self):
-        names = sorted(list(self.projects.keys()))
-
-        wn = tk.Toplevel()
-        wn.geometry("300x500")
-        wn.title("Load project")
-
-        lb = tk.Listbox(wn)
-        lb.pack(side='top')
-
-        for i, k in enumerate(names):
-            lb.insert(i, k)
-
-        def _load_data():
-            key = lb.selection_get()
-            print(f"loading project: {key}")
-            self.cur_project = self.projects[key]
-
-        bt = Button(wn, text="Load selected", command=_load_data)
-        bt.pack()
-
-        print(names)
+        path = self.ask_user_for_config_file()
+        self.load_settings(path)
+        self.last_project_path = None
 
     def save_project(self):
-        if self.last_project_name:
-            self.projects[self.last_project_name] = self.cur_project
-            self.save_settings()
-        else:
-            showerror("Error", "No project name.")
-        # name = self.ask_user_for_string("Save", "What name?")
+        if self.last_project_path:
+            self.save_settings(self.last_project_path)
+
+        self.save_settings()
 
     def save_project_as(self):
-        name = self.ask_user_for_string("Save", "What name?")
-        if name == "":
-            name = "last"
+        path = self.ask_user_for_save_config_file()
+        if not path.endswith(self.cfg_extension):
+            path += self.cfg_extension
 
-        if name != "last" and name in self.projects:
-            ret = self.ask_user_for_confirm("Overwrite", f"Overwrite {name}?")
-            # print(f"Answer: {ret}")
-            # print(f"{ret.cancel}")
-            if not ret:
-                print(f"overwrite answer: {ret}")
-                return None
-
-        self.projects[name] = self.cur_project
-        self.last_project_name = name
-        self.save_settings()
+        self.last_project_path = path
+        self.save_project()
 
     def modifier_add_menu(self, layer_key=None):
         if layer_key is not None:
@@ -968,16 +940,6 @@ class GifClipApp(GuiBuilder):
 
         return fr
 
-    def export_as(self):
-        new_path = tk.filedialog.asksaveasfilename(filetypes=self.GIF_TYPES)
-
-        if not (new_path.endswith("gif") or new_path.endswith("GIF")):
-            new_path += ".gif"
-
-        print(f"Updated export path: {new_path}")
-        self.last_export_path = new_path
-        self.export()
-
     def update_status(self, up_type="processing"):
         # print("Updating status.")
         up_type = up_type.lower()
@@ -996,42 +958,90 @@ class GifClipApp(GuiBuilder):
         else:
             raise ValueError(f"Key does not match update option: {up_type}")
 
+    def export_as(self):
+        new_path = tk.filedialog.asksaveasfilename(filetypes=self.GIF_TYPES)
+        if not (new_path.endswith("gif") or new_path.endswith("GIF")):
+            new_path += ".gif"
+
+        print(f"Updated export path: {new_path}")
+        self.last_export_path = new_path
+
+        top = tk.Toplevel()
+        top.geometry("250x100")
+        top.title("Export settings")
+
+        duration_var = tk.IntVar()
+        rgba_mode_var = tk.BooleanVar()
+        rgba_mode_var.set(True)
+
+        settings_grid = tk.Frame(top)
+        settings_grid.pack(side='top')
+        array = (
+                [
+                        (tk.Label, dict(text="Duration [ms]")),
+                        (tk.Spinbox, dict(from_=10, to=150, textvariable=duration_var)),
+                ],
+                [
+                        (tk.Label, dict(text="Transparent")),
+                        (tk.Checkbutton, dict(variable=rgba_mode_var)),
+                ],
+        )
+        self.make_grid(array, parent=settings_grid)
+
+        # spin = tk.Spinbox(settings_grid, from_=10, to=150, textvariable=duration_var)
+        # spin.grid(row=1, column=2)
+        # lab = tk.Label(set)
+
+        def set_and_export():
+            dec = {}
+            dec['use_rgba'] = bool(int(rgba_mode_var.get()))
+            dec['duration'] = int(duration_var.get())
+            self.exp_settings = dec
+            self.export()
+
+        but = tk.Button(top, text="Export", command=set_and_export)
+        but.pack()
+
     def export(self):
         if self.running_update or self.run_single_update:
-            showerror("Update is running", "Update is running now.")
+            showerror("Update is running", "Export or filters are running. Wait for end.")
             return
 
-        self.running_export = True
-        self.update_status("exporting")
-        th = threading.Thread(target=self._export_thread)
-        th.start()
-        # th.join()
+        if self.last_export_path:
+            self.running_export = True
+            self.update_status("exporting")
+            th = threading.Thread(target=self._export_thread)
+            th.start()
 
     def _export_thread(self):
-        if not self.last_export_path:
-            return None
         path = self.last_export_path
-
-        print(f"Saving gif to: {path}")
         frames = self.output_frames.copy()
-        # frames.insert(0, np.zeros_like(frames[0]))
 
-        pil_frames = [Image.fromarray(fr).convert("RGBA") for fr in frames]
+        exp_settings = self.exp_settings
+
+        # loop = exp_settings['loop']
+        duration = exp_settings['duration']
+        # disposal = exp_settings['disposal']
+        use_rgba = exp_settings['use_rgba']
+
+        if use_rgba:
+            pil_frames = [Image.fromarray(fr).convert("RGBA") for fr in frames]
+        else:
+            pil_frames = [Image.fromarray(fr).convert("RGB") for fr in frames]
+
         for pil_fr, fr in zip(pil_frames, frames):
             # fr = fr * 0 + 255
             alpha_pil = Image.fromarray(fr[:, :, 3])
             pil_fr.putalpha(alpha_pil)
-        # [img.putalpha(Image.fromarray(fr[:, :, 3]).convert("L")) for (img, fr) in zip(pil_frames, frames)]
 
         pil_frames[0].save(
                 path, save_all=True, append_images=pil_frames[1:],
                 optimize=False, loop=0,
                 # background=(0, 0, 0, 255),
-                quality=100, duration=30,
+                quality=100, duration=duration,
                 disposal=2,
-                # transparency=0,
-                # interlace=False,
         )
+        print(f"Saved gif to: {path}")
         self.running_export = False
 
 
@@ -1045,31 +1055,35 @@ def build_GifGui():
     # gui = GifClipApp(allow_load=False)
 
     gui.add_menu([
-            ("New", lambda: gui.load_any_sequence(new_pr=True)),
+            ("New project", lambda: gui.load_any_sequence(new_pr=True)),
             ("Load project", gui.load_project),
             ("Save project", gui.save_project),
             ("Save project as", gui.save_project_as),
-            ("Export Gif", gui.export_as),
-            ("Import from other config", None),
     ], name="Project")
+    gui.add_menu([
+            # ("Export Gif", gui.export_as),
+            ("Export Gif as", gui.export_as),
+    ], name="Export")
 
     gui.add_menu([
             ("New layer", gui.load_any_sequence),
             ("Change pic in layer", gui.load_any_sequence),
+            # ("Layers", None),
     ], name="Layer")
+
     gui.add_menu([
-            ("Clear error", gui.clear_error),
+            ("Force new render", gui.clear_error),
     ], name="Error")
 
     gui.add_menu([
-            ("Add sequence mod", gui.modifier_add_menu),
+            # ("Add sequence mod", gui.modifier_add_menu),
             # ("Edit sequence mods", lambda: gui.modifier_select("sequence")),
-            "separator",
-            ("Add layer filter", lambda: gui.modifier_add_menu("0")),
+            # "separator",
+            # ("Add layer filter", lambda: gui.modifier_add_menu("0")),
             # ("Edit layer filter", lambda: gui.modifier_select("filter")),
             "separator",
-            ("Remove layer mods", gui.clear_layer_mods),
-            ("Remove sequence mods", gui.clear_sequence_mods),
+            # ("Remove layer mods", gui.clear_layer_mods),
+            ("Remove pipeline mods", gui.clear_pipe_mods),
     ], name="Filters")
     #
     # gui.add_menu([
@@ -1079,7 +1093,7 @@ def build_GifGui():
     # ], name="Sequence")
 
     gui.add_menu([
-            ("Set Output size", None),
+            # ("Set Output size", None),
             ("Change Refresh rate", gui.change_refresh),
             # ("Toggle zoom", gui.toggle_zoom),
     ], name="Settings")

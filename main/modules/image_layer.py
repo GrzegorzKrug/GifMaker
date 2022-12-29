@@ -1,11 +1,14 @@
-import os
-import traceback
-from tkinter.messagebox import showerror, showwarning
-
 import cv2
+import os
+import numpy as np
+import traceback
+import threading
+
+from tkinter.messagebox import showerror, showwarning
 
 from .image_modifiers import SequenceModifiers
 from .image_readers import read_gif, read_webp
+from .time_utils import measure_time_decorator
 
 
 class Layer:
@@ -19,7 +22,7 @@ class Layer:
 
         if path:
             self.load_file(path)
-            print(self.orig_frames[0].shape)
+            # print(self.orig_frames[0].shape)
 
         if filters_list is None:
             self.filters_list = []
@@ -37,6 +40,12 @@ class Layer:
         self.output_frames = []
 
     def load_file(self, path):
+        # th = threading.Thread(target=self._load_thread, args=(path,))
+        # th.start()
+        self._load_thread(path)
+
+    @measure_time_decorator
+    def _load_thread(self, path):
         path = os.path.abspath(path)
         *_, ext = path.split('.')
         ext = ext.lower()
@@ -50,9 +59,6 @@ class Layer:
             else:
                 print("Picture has alpha channel")
                 pic = pic[:, :, [2, 1, 0, 3]]
-                # pic = cv2.cvtColor(pic, cv2.COLOR_BGRA2RGBA)
-                # cv2.imshow("zd", pic[:, :, 3])
-                # cv2.waitKey()
 
             self.orig_frames = [pic]
             # self.clip_arr = [0, 0, 0, 0]
@@ -67,8 +73,11 @@ class Layer:
                 #     frames.append(frame)
                 if not ret:
                     break
+
+                frame = frame.astype(np.uint8)
                 frames.append(frame[:, :, [2, 1, 0]])
 
+            # print(f"Frames: {len(frames)}")
             self.orig_frames = frames
 
         elif ext == 'webp':

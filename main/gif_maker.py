@@ -276,9 +276,10 @@ class GifClipApp(GuiBuilder):
 
         if frames:
             out_pos = int(
-                    np.floor((self.playback_position / self.cycle_duration) * len(frames)))
+                    np.floor((self.playback_position / self.cycle_duration) * len(frames))
+            )
             out_pic = frames[out_pos]
-            out_pic = max_image_size(out_pic)
+            out_pic = max_image_size(out_pic, max_width=700, max_height=460)
             out_tk_pic = self.numpy_pic_to_tk(out_pic)
             self.update_photo(img_frame, out_tk_pic)
 
@@ -309,10 +310,12 @@ class GifClipApp(GuiBuilder):
             layer.apply_mods()
 
         if self.layers_dict and self.layers_dict[0]:
-            if self.layers_dict[0].output_frames:
-                output_frames = [fr.copy() for fr in self.layers_dict[0].output_frames]
-            else:
-                output_frames = [fr.copy() for fr in self.layers_dict[0].orig_frames]
+            # if self.layers_dict[0].output_frames:
+            #     output_frames = [fr.copy() for fr in self.layers_dict[0].output_frames]
+            # else:
+            #     output_frames = [fr.copy() for fr in self.layers_dict[0].orig_frames]
+
+            output_frames = self.layers_dict[0].output_frames
 
             pipeline_steps = [output_frames]
 
@@ -491,7 +494,7 @@ class GifClipApp(GuiBuilder):
         def add_tab(collector_instance, tabname=None):
             tab1 = tk.Frame(tab_control)
             tab_control.add(tab1, text=tabname)
-            lb = tk.Listbox(tab1, height=20)
+            lb = tk.Listbox(tab1, height=30)
             lb.pack()
 
             for i, k in enumerate(collector_instance.keys):
@@ -552,14 +555,14 @@ class GifClipApp(GuiBuilder):
 
     def modifier_select_menu(self, layer_key=None):
         if layer_key is None:
-            self._mod_selection(self.pipeline_mods_list, "pipeline")
+            self._modifier_select(self.pipeline_mods_list, "pipeline")
         else:
             if layer_key not in self.layers_dict:
                 showwarning("Wrong key", f"Wrong layer key to edit: {layer_key}")
                 return None
-            self._mod_selection(self.layers_dict[layer_key].filters_list, "layer")
+            self._modifier_select(self.layers_dict[layer_key].filters_list, "layer")
 
-    def _mod_selection(self, all_mods_union: Union[list, dict], title=""):
+    def _modifier_select(self, all_mods_union: Union[list, dict], title=""):
         if len(all_mods_union) <= 0:
             showwarning("Warning", f"No active `{title}` filters.")
             return None
@@ -582,7 +585,7 @@ class GifClipApp(GuiBuilder):
         list_box_group = Frame(wn)
         list_box_group.pack(side='top')
 
-        lb = tk.Listbox(list_box_group)
+        lb = tk.Listbox(list_box_group, height=30)
         lb.pack(side='left')
         button_group = Frame(list_box_group)
         button_group.pack(side='left')
@@ -961,6 +964,7 @@ class GifClipApp(GuiBuilder):
         top.title("Export settings")
 
         duration_var = tk.IntVar()
+        duration_var.set(45)
         rgba_mode_var = tk.BooleanVar()
         rgba_mode_var.set(True)
 
@@ -1118,16 +1122,17 @@ def build_GifGui():
     frames, refs = gui.make_grid(
             [
                     [
-                            (gui.make_preview_switch, dict(label='Edit View')),
+                            (gui.make_preview_switch, dict(label='Edit Top')),
                             (gui.create_preview_box, dict(text='Edit View')),
                     ],
                     [
-                            (gui.make_preview_switch, dict(label='Edit View')),
+                            (gui.make_preview_switch, dict(label='Edit Lower')),
                             (gui.create_preview_box, dict(text='Preview'))
                     ]
             ],
             parent=screen_frame, packing=dict(sticky='news', ),
     )
+    screen_frame.columnconfigure(2, weight=5)
 
     c = ["1", "4", "8", "b"]
     frames = frames[0] + frames[1]

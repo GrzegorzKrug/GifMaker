@@ -12,6 +12,8 @@ from typing import Union
 import imutils
 import timeit
 
+from .time_utils import measure_time_decorator
+
 
 def sequence_adapter(func):
     @wraps(wrapped=func)
@@ -24,6 +26,7 @@ def sequence_adapter(func):
             in_type = 'pic'
             source = [source]
 
+        # print(f"func: {func.__name__}, type: {type(source)} key: {in_type}")
         res = func(source, *a, **kw)
 
         if in_type == '4dnum':
@@ -200,9 +203,10 @@ def blend_region(base, overlay):
         alfa = alfa / 255
 
         combined = base[:, :, :3] * alfa + overlay[:, :, :3] * beta
-        combined = combined.round().astype(np.uint8)
+        combined = combined.round().astype(int)
 
         combined_alpha = (base[:, :, 3].astype(int) + overlay[:, :, 3])[:, :, np.newaxis].astype(int)
+        # combined_alpha = (overlay[:, :, 3])[:, :, np.newaxis].astype(int)
 
         merged = np.concatenate([combined, combined_alpha], axis=2)
         merged = np.clip(merged, 0, 255).astype(np.uint8)
@@ -221,6 +225,37 @@ def repeat_sequence(im_ob, repeat):
     frames = [fr for _ in range(repeat) for fr in im_ob]
 
     return frames
+
+
+@SequenceModifiers.adder(
+        'reverse',
+        (bool, 0, 1, 1, "Append reversed")
+)
+def reverse(sequence, append=True):
+    new_sequence = [fr.copy() for fr in sequence]
+    out = new_sequence.copy()
+    if append:
+        for img in new_sequence[::-1]:
+            out.append(img.copy())
+
+    return out
+
+
+@SequenceModifiers.adder(
+        'Alpha cutoff',
+        (float, 0, 255, 1, "Threshold")
+)
+@sequence_adapter
+def cutoff_alpha(sequence, threshold=50):
+    out = []
+    for img in sequence:
+        mask = img[:, :, 3] <= threshold
+        img = img.copy()
+        # print(mask.shape)
+        img[mask, 3] = 0
+
+        out.append(img)
+    return out
 
 
 @SequenceModifiers.adder(
@@ -529,6 +564,7 @@ def dynamic_hue(sequence, color, n_cycles, alpha):
         (float, 0, 100, 1, "Start 100%"),
         (float, 0, 100, 1, "End 100%")
 )
+@measure_time_decorator
 def clip_sequence(sequence, start: float, stop: float):
     size = len(sequence)
     start = np.floor(start * size / 100).astype(int)
@@ -546,6 +582,7 @@ def clip_sequence(sequence, start: float, stop: float):
         (float, 0, 100, 1, "Bottom 100%")
 )
 @sequence_adapter
+@measure_time_decorator
 def crop_image(sequence, left: float, right: float, top: float, bottom: float):
     orig = sequence[0]
     h, w, c = orig.shape
@@ -570,6 +607,7 @@ def crop_image(sequence, left: float, right: float, top: float, bottom: float):
         (int, 50, 10000, 1, "New Dimension"),
 )
 @sequence_adapter
+@measure_time_decorator
 def resize_ratio(sequence, res_typ='outer', new_dim=150):
     orig = sequence[0]
     h, w, c = orig.shape
@@ -609,6 +647,7 @@ def run_thread(ang):
         (int, 0, 255, 3, ["Red", "Green", "Blue"])
 )
 @sequence_adapter
+@measure_time_decorator
 def draw_rectangle(sequence, offset_start=None, window_fraction=0.1, color=None, alpha=0.6):
     if offset_start is None:
         offset_start = 0, 0
@@ -717,9 +756,9 @@ def get_overlay_indexes(base_axis_size, position, overlay_size):
     return x1, x2, dx1, dx2
 
 
-def convolve_pic(sequence, dist, kernel, allowed_channels):
+def convolve_pic(sequence, keep_margin, kernel, allowed_channels):
     mask_of_original_pixels = np.ones_like(sequence[0], dtype=bool)
-    mask_of_original_pixels[dist:-dist, dist:-dist] = False
+    mask_of_original_pixels[keep_margin:-keep_margin, keep_margin:-keep_margin] = False
 
     picture_channels = sequence[0].shape[2]
     allowed_channels = [ch for ch in allowed_channels if ch <= picture_channels]
@@ -755,18 +794,21 @@ def gauss_kernel(kernlen=21, nsig=3):
         (int, -1, 3, 1, "Channel"),
 )
 @sequence_adapter
-def mean_filter(sequence, dist=1, channel=0):
-    size = 1 + 2 * dist
+@measure_time_decorator
+def mean_filter(sequence, radius=1, channel_ind=0):
+    size = 1 + 2 * radius
     # kernel = np.zeros((size, size)) / (size * size)
-    kernel = gauss_kernel(size)
+    # kernel = gauss_kernel(size)
+    kernel = np.ones((size, size))
+    kernel = kernel / kernel.sum()
     # print(f"Mean kernel: {kernel}")
 
-    if channel == 4:
+    if channel_ind == 4:
         allowed_channels = [0, 1, 2, 3]
     else:
-        allowed_channels = [channel]
+        allowed_channels = [channel_ind]
 
-    output = convolve_pic(sequence, dist, kernel, allowed_channels)
+    output = convolve_pic(sequence, radius, kernel, allowed_channels)
 
     return output
 
@@ -777,6 +819,7 @@ def mean_filter(sequence, dist=1, channel=0):
         (int, -1, 0, 1, "Channel")
 )
 @sequence_adapter
+@measure_time_decorator
 def median_filter(sequence, dist=1, channel=0):
     size = 1 + 2 * dist
     kernel = np.zeros((size, size))
@@ -802,6 +845,7 @@ def median_filter(sequence, dist=1, channel=0):
         (float, 0.5, 10, 1, 'Distance exponent')
 )
 @sequence_adapter
+@measure_time_decorator
 def mask_color(sequence, color, max_dist=5, exponent=1):
     output = []
     for fr in sequence:
@@ -836,7 +880,8 @@ def mask_color(sequence, color, max_dist=5, exponent=1):
         (int, 0, 3, 1, "Channel"),
 )
 @sequence_adapter
-def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel=0):
+@measure_time_decorator
+def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
     size = 2 * radius + 1
     half = radius
     kernel = np.zeros((size, size), dtype=np.uint8)
@@ -846,7 +891,10 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel=0):
     out = [None] * len(sequence)
 
     for ind, img in enumerate(sequence):
-        chan = img[:, :, channel]
+        if len(img.shape) == 2:
+            raise ValueError("Image in sequence is 2d. No alpha channel.")
+
+        chan = img[:, :, channel_ind]
 
         if dilate:
             new_ch = cv2.dilate(chan, kernel, iterations=repeat)
@@ -856,7 +904,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel=0):
         new_ch = np.clip(new_ch.round(), 0, 255).astype(np.uint8)
 
         new_img = img.copy()
-        new_img[:, :, channel] = new_ch
+        new_img[:, :, channel_ind] = new_ch
 
         out[ind] = new_img
 
@@ -864,6 +912,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel=0):
 
 
 @sequence_adapter
+@measure_time_decorator
 def mask_area(sequence, pos, max_dist=5):
     return
 
@@ -878,6 +927,7 @@ def mask_area(sequence, pos, max_dist=5):
         # (int, 0, 100, 1, "Keep value"),
         (bool, 0, 1, 1, "Debug")
 )
+@measure_time_decorator
 def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
                            window_fraction=None, smoothing_frames=0, debug=False):
     if offset_start is None:
@@ -1101,6 +1151,7 @@ def track_template_in_sequence(
         (int, -100, 100, 2, ["X center offset", "Y center offset"]),
 )
 @sequence_adapter
+@measure_time_decorator
 def squerify(sequence, offset):
     pass
 
@@ -1110,6 +1161,7 @@ def squerify(sequence, offset):
         (float, 0, 100, 2, ['Vertical increase', 'Horizontal increase']),
 )
 @sequence_adapter
+@measure_time_decorator
 def extend(sequence, increase):
     h, w, c = sequence[0].shape
 
@@ -1133,6 +1185,7 @@ def extend(sequence, increase):
 
 @SequenceModifiers.adder('add transparency')
 @sequence_adapter
+@measure_time_decorator
 def add_transparency(sequence):
     h, w, c = sequence[0].shape
 
@@ -1150,7 +1203,8 @@ def add_transparency(sequence):
 
 
 @sequence_adapter
-def max_image_size(sequence: Union[list, np.ndarray], max_height=400, max_width=700, minsize=250):
+# @measure_time_decorator
+def max_image_size(sequence: Union[list, np.ndarray], max_height=400, max_width=500, minsize=250):
     h, w, c = sequence[0].shape
 
     over_height = h / max_height
@@ -1164,45 +1218,65 @@ def max_image_size(sequence: Union[list, np.ndarray], max_height=400, max_width=
         # kw_str = 'height'
         # kw_val = max_height
     else:
-        new_heigh = max_width * hw_ratio
-        new_size = new_heigh, max_width
+        new_heigh = np.round(max_width * hw_ratio).astype(int)
+        new_size = max_width, new_heigh
         # kw_str = 'width'
         # kw_val = max_width
-    # print(f"new size: {new_size}")
 
     if over_height > 1 or over_width > 1:
         sequence = [cv2.resize(fr, new_size) for fr in sequence]
-    # elif minsize > 0:
-    #     sequence = [imutils.resize(fr, **{kw_str: minsize}) for fr in sequence]
-    # print(sequence[0].shape)
 
     return sequence
 
 
+def stack_channels_as_rgb(channels_list, labels, size=1.2):
+    h, w, *_ = channels_list[0].shape
+
+    rgb_list = []
+
+    for ch, lb in zip(channels_list, labels):
+        if len(ch.shape) == 2:
+            ch = ch[:, :, np.newaxis]
+            rgb = np.concatenate([ch, ch, ch], axis=2)
+
+        elif ch.shape[2] == 4:
+            rgb = ch[:, :, :3]
+
+        elif ch.shape[2] == 1:
+            rgb = np.concatenate([ch, ch, ch], axis=2)
+
+        else:
+            print("WHAT? What i missed?")
+            print(ch.shape)
+
+        rgb = rgb.astype(np.uint8)
+
+        rgb = cv2.putText(
+                rgb, lb, (5, 60),
+                fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 50, 0), thickness=8,
+        )
+        rgb = cv2.putText(
+                rgb, lb, (5, 60),
+                fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 255, 0), thickness=3,
+        )
+        rgb_list.append(rgb)
+
+    out = np.concatenate(rgb_list, axis=0).astype(np.uint8)
+    return out
+
+
 if __name__ == "__main__":
     rita = cv2.imread("../unknown.png", 1)
+    aurora = cv2.imread("../aurora.png", cv2.IMREAD_UNCHANGED)
 
-    seq = np.random.random(15)
-    # seq = seq.reshape(5, 2).T.ravel()
+    blank = np.zeros_like(aurora)
+    blank[:, :, 3] = 255
 
-    # print(seq)
-    import matplotlib.pyplot as plt
+    aurora = mean_filter(aurora, channel_ind=3, radius=3, )
+
+    out = blend_region(blank, aurora)
+    cv2.imshow("Blend", out)
+    cv2.waitKey()
 
 
-    plt.figure(dpi=100)
-    # plt.plot(seq, label="Orig")
-
-    for ker_typ in ["avg", "linear", "exp"]:
-        for rad in [2, 4]:
-            if ker_typ == "exp":
-                continue
-                for ex in [0.7, 1, 1.4, 2]:
-                    out = moving_average(seq, rad, kernel_type=ker_typ, kernel_exp=ex)
-                    plt.plot(out, label=f"{ker_typ} : {rad} : {ex}")
-            else:
-                out = moving_average(seq, rad, kernel_type=ker_typ)
-                plt.plot(out, label=f"{ker_typ} : {rad}")
-                print(len(out))
-
-    plt.legend()
-    plt.show()
+    # cv2.imwrite(f"..{os.path.sep}test.png", aurora)

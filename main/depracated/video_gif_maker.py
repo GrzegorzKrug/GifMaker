@@ -31,8 +31,6 @@ def measure_time(fun):
         else:
             timeend = f"{dur:{fmt}} s"
         print(f"{fun.__name__} exec time: {timeend}: ")
-        # f"start sec: {time0 % 60:>2.2f}, "
-        # f"end sec:{t_end % 60:>2.2f}")
 
         return res
 

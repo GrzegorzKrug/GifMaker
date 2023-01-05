@@ -65,7 +65,7 @@ class GifClipApp(GuiBuilder):
     picture_display_size = 300
     # output_size = 600
     # default_durations = [35]
-    cycle_duration = 300
+    cycle_duration = 100
 
     "GUI"
     update_interval = 15
@@ -1012,6 +1012,7 @@ class GifClipApp(GuiBuilder):
         frames = self.output_frames.copy()
 
         exp_settings = self.exp_settings
+        print(f"Export settings: {exp_settings}")
 
         # loop = exp_settings['loop']
         duration = exp_settings['duration']
@@ -1020,13 +1021,14 @@ class GifClipApp(GuiBuilder):
 
         if use_rgba:
             pil_frames = [Image.fromarray(fr).convert("RGBA") for fr in frames]
+
+            for pil_fr, fr in zip(pil_frames, frames):
+                # fr = fr * 0 + 255
+                alpha_pil = Image.fromarray(fr[:, :, 3])
+                pil_fr.putalpha(alpha_pil)
+
         else:
             pil_frames = [Image.fromarray(fr).convert("RGB") for fr in frames]
-
-        for pil_fr, fr in zip(pil_frames, frames):
-            # fr = fr * 0 + 255
-            alpha_pil = Image.fromarray(fr[:, :, 3])
-            pil_fr.putalpha(alpha_pil)
 
         pil_frames[0].save(
                 path, save_all=True, append_images=pil_frames[1:],
@@ -1035,7 +1037,7 @@ class GifClipApp(GuiBuilder):
                 quality=100, duration=duration,
                 disposal=2,
         )
-        print(f"Saved gif to: {path}")
+        print(f"Saved gif to: {path}. Frames: {len(pil_frames)}")
         self.running_export = False
 
 

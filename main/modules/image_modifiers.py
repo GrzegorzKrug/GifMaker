@@ -5,13 +5,13 @@ import os
 from PIL import Image
 
 from functools import wraps
-from scipy.signal import convolve, convolve2d
+from scipy.signal import convolve2d
 from scipy import stats as st
 from typing import Union
 
 import imutils
-import timeit
 
+from main.modules.math_functions import moving_average
 from .time_utils import measure_time_decorator
 
 
@@ -134,29 +134,37 @@ SequenceModifiers.type_ = "modifier"
 
 @SequenceModifiers.adder(
         'sequence sampler',
-        (str, 'all', ['all', 'linear'], 1, 'Mode'),
-        (int, 1, 99999, 1, 'N frames'),
-        (float, -999, 999, 1, 'Non linear variable')
+        (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
+        (int, 1, 99999, 1, 'N output frames'),
+        (float, -999, 999, 1, 'Non linear variable'),
+        (float, 0, 500, 1, "Ratio [%] sample")
 
 )
 @sequence_adapter
-def sequence_sampler(im_ob, mode='linear', frames_n=1, mode_value=0):
+def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ratio_value=100):
     # print(type(im_ob), type(im_ob) is np.ndarray)
-    if len(im_ob) == 1:
-        frame = np.array(im_ob[0], dtype=np.uint8)
+    if len(image_sequence) == 1:
+        frame = np.array(image_sequence[0], dtype=np.uint8)
         frames = [frame for _ in range(frames_n)]
 
-    elif type(im_ob) is np.ndarray and len(im_ob.shape) == 3:
+    elif type(image_sequence) is np.ndarray and len(image_sequence.shape) == 3:
         # frame = np.array(im_ob, dtype=np.uint8)
-        frames = [im_ob.copy() for _ in range(frames_n)]
+        frames = [image_sequence.copy() for _ in range(frames_n)]
 
     elif mode == "all":
-        frames = [np.array(fr, dtype=np.uint8) for fr in im_ob]
+        frames = [np.array(fr, dtype=np.uint8) for fr in image_sequence]
 
     elif mode == 'linear':
-        indexes = np.linspace(0, len(im_ob), frames_n + 1)[:-1]
+        indexes = np.linspace(0, len(image_sequence), frames_n + 1)[:-1]
         indexes = np.floor(indexes).astype(int)
-        frames = [im_ob[ind] for ind in indexes]
+        frames = [image_sequence[ind] for ind in indexes]
+
+    elif mode == 'ratio':
+        ratio_frames = (ratio_value / 100) * len(image_sequence)
+        ratio_frames = np.clip(ratio_frames, 1, np.inf).round().astype(int)
+        indexes = np.linspace(0, len(image_sequence), ratio_frames + 1)[:-1]
+        indexes = np.floor(indexes).astype(int)
+        frames = [image_sequence[ind] for ind in indexes]
 
     else:
         raise ValueError("Only linear mode supported")
@@ -921,8 +929,8 @@ def mask_area(sequence, pos, max_dist=5):
         "snap point to location",
         (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
         (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),
-        (float, 0, 100, 1, "Frame position"),
-        (float, 0, 50, 1, "Template size"),
+        (float, 0, 100, 1, "Frame [%] position"),
+        (float, 0, 50, 1, "Template [%] size"),
         (int, 0, 100, 1, "Smoothing distance"),
         # (int, 0, 100, 1, "Keep value"),
         (bool, 0, 1, 1, "Debug")
@@ -939,7 +947,7 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
     if window_fraction is None:
         window_fraction = 10
 
-    window_fraction /= 100
+    window_fraction /= 200
 
     h, w, c = sequence[0].shape
     point_end = (np.array([offset_end[0] / 200, offset_end[1] / 200], dtype=float) + 0.5)
@@ -990,115 +998,6 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
         output.append(blank)
 
     return output
-
-
-def _conv_try(arr, radius):
-    """
-
-    Args:
-        arr:
-        radius:
-
-    Returns:
-
-    """
-    size = 1 + 2 * abs(radius)
-
-    left = np.zeros(radius)
-    right = np.zeros(radius)
-
-    if radius > 0:
-        csum = 0
-        for i, num in enumerate(arr[:radius * 2]):
-            csum += num
-            if i >= radius:
-                left[i - radius] = csum / (i + 1)
-
-        csum = 0
-        for i, num in enumerate(arr[:-radius * 2 - 1:-1]):
-            csum += num
-            if i >= radius:
-                right[i - radius] = csum / (i + 1)
-
-    return left, right
-
-
-def moving_average(array, radius=1, padding="try", kernel_type="avg", kernel_exp=2):
-    """
-
-    Args:
-        array:
-        radius:
-        padding:
-            full - extends results to padded numbers
-
-            same - calculates average for every number,  with 0
-
-            valid- returns only average number that can be calculated
-
-            try - calculates number using every value it has
-
-            keep - keep values that can not be calculated
-
-        kernel_type:
-            avg - pass
-
-            linear - pass
-            exp - pass
-
-        kernel_exp:
-            non linearity exponent
-
-    Returns:
-
-    """
-    smoothing_frames = 1 + 2 * abs(radius)
-    if smoothing_frames > len(array):
-        return array
-
-    if kernel_type == "avg":
-        kernel = np.ones(smoothing_frames) / smoothing_frames
-
-    elif kernel_type == "linear":
-        kernel = np.arange(radius + 1) + 1
-        kernel = np.concatenate([kernel[:-1], np.flip(kernel)])
-        kernel = kernel / kernel.sum()
-
-    else:
-        "Exponential"
-        kernel = np.arange(radius + 1) + 1
-        kernel = np.concatenate([kernel[:-1], np.flip(kernel)])
-        kernel = kernel ** kernel_exp
-        kernel = kernel / kernel.sum()
-
-    if padding == "same":
-        out = convolve(array, kernel, 'same')
-
-    elif padding == "try" or padding == 'keep':
-        out = convolve(array, kernel, 'valid')
-
-        if padding == "try":
-            left, right = _conv_try(array, radius)
-            # a, b, c = len(left), len(out), len(right)
-            # print(radius,a + b + c, a, b, c)
-            # print(f"\tKernel: {kernel.shape}")
-
-        else:
-            left = array[:radius]
-            right = array[-radius:]
-            # print(len(left), len(out), len(right))
-
-        out = np.concatenate([left, out, right])
-
-    elif padding == "full":
-        out = convolve(array, kernel, 'full')
-
-    else:
-        "valid"
-        out = convolve(array, kernel, 'valid')
-
-    # posx[:smoothing_frames] = tempx[:smoothing_frames]
-    return out
 
 
 def track_template_in_sequence(

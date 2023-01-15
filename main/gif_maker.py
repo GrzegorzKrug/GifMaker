@@ -20,6 +20,8 @@ from modules.image_layer import Layer
 from modules.image_modifiers import SequenceModifiers, max_image_size
 from modules.pipeline_modifiers import PipeLineModifers
 
+from yasiu_native.time import measure_real_time_decorator
+
 
 GifImagePlugin.LOADING_STRATEGY = GifImagePlugin.LOADING_STRATEGY.RGB_ALWAYS
 
@@ -44,28 +46,28 @@ def format_time(dur, fmt=">4.1f"):
     return text
 
 
-def measure_time(fun):
-    @wraps(wrapped=fun)
-    def wrapper(*a, **kw):
-        time0 = time.perf_counter()
-        res = fun(*a, **kw)
-        t_end = time.perf_counter()
-        dur = t_end - time0
-        text = format_time(dur)
-        print(f"{fun.__name__} exec time: {text}: ")
-        # f"start sec: {time0 % 60:>2.2f}, "
-        # f"end sec:{t_end % 60:>2.2f}")
-
-        return res
-
-    return wrapper
+# def measure_time(fun):
+#     @wraps(wrapped=fun)
+#     def wrapper(*a, **kw):
+#         time0 = time.perf_counter()
+#         res = fun(*a, **kw)
+#         t_end = time.perf_counter()
+#         dur = t_end - time0
+#         text = format_time(dur)
+#         print(f"{fun.__name__} exec time: {text}: ")
+#         # f"start sec: {time0 % 60:>2.2f}, "
+#         # f"end sec:{t_end % 60:>2.2f}")
+#
+#         return res
+#
+#     return wrapper
 
 
 class GifClipApp(GuiBuilder):
     picture_display_size = 300
     # output_size = 600
     # default_durations = [35]
-    cycle_duration = 100
+    cycle_steps = 300
 
     "GUI"
     update_interval = 15
@@ -78,6 +80,7 @@ class GifClipApp(GuiBuilder):
         self.run_single_update = True
         self.running_update = False
         self.running_export = False
+        self.running_load = False
 
         "Project"
         self.pipeline_mods_list = []
@@ -126,6 +129,7 @@ class GifClipApp(GuiBuilder):
         self.run_single_update = True
         self.running_update = False
         self.running_export = False
+        self.running_load = False
 
     @property
     def app_params(self):
@@ -178,11 +182,13 @@ class GifClipApp(GuiBuilder):
             ) = new_val
 
             self._next_layer_key = int(self._next_layer_key)
-            print("Loaded last project:")
+            # print("Loaded last project:")
 
             for lay_key_str, lay_args in layers_dict.items():
                 lay_key = int(lay_key_str)
                 lay = Layer(*lay_args)
+                # print(f"Loading layer:{lay}")
+                # print(f"ARgs: {lay_args}")
                 self.layers_dict[lay_key] = lay
 
     def create_preview_box(self, parent, *a, text=None, **kw):
@@ -218,7 +224,13 @@ class GifClipApp(GuiBuilder):
 
         """
 
-        if self.run_single_update and not self.running_update and not self.running_export:
+        if self.running_load:
+            # print("Setting load")
+            self.update_status("loading")
+            self.check_if_all_are_loaded()
+            return None
+
+        elif self.run_single_update and not self.running_update and not self.running_export:
             self.run_single_update = False
             self.running_update = True
             self.update_status("processing")
@@ -234,7 +246,7 @@ class GifClipApp(GuiBuilder):
         self._read_config_show_pic(self.display_config[0], self.preview_frames_list[0])
         self._read_config_show_pic(self.display_config[1], self.preview_frames_list[1])
 
-        self.playback_position = (self.playback_position + 1) % self.cycle_duration
+        self.playback_position = (self.playback_position + 1) % self.cycle_steps
 
     def _read_config_show_pic(self, config, img_frame):
         var, spin = config
@@ -276,7 +288,7 @@ class GifClipApp(GuiBuilder):
 
         if frames:
             out_pos = int(
-                    np.floor((self.playback_position / self.cycle_duration) * len(frames))
+                    np.floor((self.playback_position / self.cycle_steps) * len(frames))
             )
             out_pic = frames[out_pos]
             out_pic = max_image_size(out_pic, max_width=700, max_height=460)
@@ -296,18 +308,33 @@ class GifClipApp(GuiBuilder):
     def handle_error_mod():
         pass
 
-    @measure_time
+    def check_if_all_are_loaded(self):
+        for layer in self.layers_dict.values():
+            if layer.is_loading:
+                return None
+        self.running_load = False
+        self.run_single_update = True
+
+    @measure_real_time_decorator
     def apply_all_modifications(self):
         """Applies all mods to all layers and merges sequence"""
 
         t0 = time.perf_counter()
         for layer in self.layers_dict.values():
+            # print(layer, layer.is_loading)
+            if layer.is_loading:
+                self.running_load = True
+                # print(f"Found loading layer: {layer}")
+                return None
+
             if layer.pipeline_updates:
                 continue
             # layer_frames = layer.orig_frames
             # layer_frames = self.apply_mods_to_sequence(layer_frames, layer.filters_list)
             # layer.output_frames = layer_frames
             layer.apply_mods()
+
+        self.running_load = False
 
         if self.layers_dict and self.layers_dict[0]:
             # if self.layers_dict[0].output_frames:
@@ -378,75 +405,6 @@ class GifClipApp(GuiBuilder):
             showwarning("Minimal update is 15ms", "Minimal update time is 15ms")
             ret = 15
         self.update_interval = ret
-
-    def interactive_clips_edit(self):
-        wn = tk.Toplevel()
-        wn.geometry("250x300")
-        wn.title("Adjust picture clipping")
-        # wn.title(f"Clips of pic: {index + 1}")
-
-        fr_hor = LabelFrame(wn)
-        fr_hor.pack()
-
-        lb = Label(fr_hor, text="Left Clip")
-        lb.pack()
-        button_list = []
-
-        bt = tk.Scale(
-                fr_hor, from_=0, to=1000, orient='horizontal',
-                command=lambda x: self.clips_update(2, x)
-        )
-        bt.pack()
-        # bt.set(self.clip_arr[2])
-        button_list.append(bt)
-
-        lb = Label(fr_hor, text="Right Clip")
-        lb.pack()
-        bt = tk.Scale(
-                fr_hor, from_=0, to=1000, orient='horizontal',
-                command=lambda x: self.clips_update(3, x)
-        )
-        bt.pack()
-        # bt.set(self.clip_arr[3])
-        button_list.append(bt)
-
-        frame = LabelFrame(wn)
-        frame.pack()
-
-        group1 = LabelFrame(frame)
-        group1.pack(side='left')
-        lb = Label(group1, text="Top Clip")
-        lb.pack(side='top')
-        bt = tk.Scale(
-                group1, from_=0, to=1000, orient='vertical',
-                command=lambda x: self.clips_update(0, x)
-        )
-        bt.pack()
-        # bt.set(self.clip_arr[0])
-        button_list.append(bt)
-
-        group2 = LabelFrame(frame)
-        group2.pack(side='left')
-        lb = Label(group2, text="Bottom Clip")
-        lb.pack()
-        bt = tk.Scale(
-                group2, from_=0, to=1000, orient='vertical',
-                command=lambda x: self.clips_update(1, x)
-        )
-        bt.pack()
-        # bt.set(self.clip_arr[0])
-        button_list.append(bt)
-
-        def reset_clips():
-            self.clip_arr = [0, 0, 0, 0]
-            for bt in button_list:
-                bt.set(0)
-
-        bt = Button(wn, text="Rest clips", command=reset_clips)
-        bt.pack()
-
-    # def clips_update(self, clip_index, new_val):
-    #     self.clip_arr[clip_index] = new_val
 
     def load_project(self):
         path = self.ask_user_for_config_file()
@@ -882,7 +840,8 @@ class GifClipApp(GuiBuilder):
 
         for num, text in enumerate(
                 ["Output", "Pipeline step", 'Layer input', 'Layer output'],
-                1):
+                1
+        ):
             rad1 = tk.Radiobutton(
                     fr, variable=var, text=text, value=num,
                     # validatecommand=validate_spin,
@@ -948,6 +907,10 @@ class GifClipApp(GuiBuilder):
             print("status export:")
             self.status_label.config(text="Exporting...", bg="#36C", fg="#DDD")
 
+        elif up_type == "loading":
+            self.status_label.config(text="Some layers are loading...", bg="#36C", fg="#DDD")
+            # print("status export:")
+
         else:
             raise ValueError(f"Key does not match update option: {up_type}")
 
@@ -1007,7 +970,9 @@ class GifClipApp(GuiBuilder):
             th = threading.Thread(target=self._export_thread)
             th.start()
 
+    @measure_real_time_decorator
     def _export_thread(self):
+        t0 = time.time()
         path = self.last_export_path
         frames = self.output_frames.copy()
 
@@ -1038,6 +1003,8 @@ class GifClipApp(GuiBuilder):
                 disposal=2,
         )
         print(f"Saved gif to: {path}. Frames: {len(pil_frames)}")
+        tend = time.time() - t0
+        self.last_process_time = tend
         self.running_export = False
 
 
@@ -1045,7 +1012,7 @@ class GifClipApp(GuiBuilder):
 #     return kw
 
 
-@measure_time
+@measure_real_time_decorator
 def build_GifGui():
     gui = GifClipApp(allow_load=True)
     # gui = GifClipApp(allow_load=False)

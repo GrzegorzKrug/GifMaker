@@ -8,7 +8,7 @@ from tkinter.messagebox import showerror, showwarning
 
 from .image_modifiers import SequenceModifiers
 from .image_readers import read_gif, read_webp
-from .time_utils import measure_time_decorator
+from yasiu_native.time import measure_real_time_decorator
 
 
 class Layer:
@@ -21,14 +21,21 @@ class Layer:
         self.has_changes = True
 
         if path:
+            self.is_loading = True
             self.load_file(path)
+            # self.loading = False
             # print(self.orig_frames[0].shape)
+        else:
+            self.is_loading = False
 
         if filters_list is None:
             self.filters_list = []
         else:
             assert type(filters_list) is list, "Filters list is not list"
             self.filters_list = filters_list
+
+    def __repr__(self):
+        return f"{self.__class__}: filters: `{self.source_file_path}`, loading:{self.is_loading}"
 
     @property
     def serial_form(self):
@@ -40,11 +47,11 @@ class Layer:
         self.output_frames = []
 
     def load_file(self, path):
-        # th = threading.Thread(target=self._load_thread, args=(path,))
-        # th.start()
-        self._load_thread(path)
+        th = threading.Thread(target=self._load_thread, args=(path,))
+        th.start()
+        # self._load_thread(path)
 
-    @measure_time_decorator
+    @measure_real_time_decorator
     def _load_thread(self, path):
         path = os.path.abspath(path)
         *_, ext = path.split('.')
@@ -94,6 +101,7 @@ class Layer:
             return None
 
         self.source_file_path = path
+        self.is_loading = False
 
     def load_rgb_pic(self, ph=None, new_pr=False):
         raise NotImplemented

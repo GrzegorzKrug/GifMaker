@@ -3,7 +3,7 @@ import time
 from functools import wraps
 
 
-def measure_time_decorator(fun):
+def measure_real_time_decorator(fun):
 
     @wraps(wrapped=fun)
     def wrapper(*a, **kw):

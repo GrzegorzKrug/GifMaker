@@ -12,7 +12,7 @@ from typing import Union
 import imutils
 
 from main.modules.math_functions import moving_average
-from .time_utils import measure_time_decorator
+from yasiu_native.time import measure_real_time_decorator
 
 
 def sequence_adapter(func):
@@ -572,7 +572,7 @@ def dynamic_hue(sequence, color, n_cycles, alpha):
         (float, 0, 100, 1, "Start 100%"),
         (float, 0, 100, 1, "End 100%")
 )
-@measure_time_decorator
+@measure_real_time_decorator
 def clip_sequence(sequence, start: float, stop: float):
     size = len(sequence)
     start = np.floor(start * size / 100).astype(int)
@@ -590,7 +590,7 @@ def clip_sequence(sequence, start: float, stop: float):
         (float, 0, 100, 1, "Bottom 100%")
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def crop_image(sequence, left: float, right: float, top: float, bottom: float):
     orig = sequence[0]
     h, w, c = orig.shape
@@ -615,7 +615,7 @@ def crop_image(sequence, left: float, right: float, top: float, bottom: float):
         (int, 50, 10000, 1, "New Dimension"),
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def resize_ratio(sequence, res_typ='outer', new_dim=150):
     orig = sequence[0]
     h, w, c = orig.shape
@@ -655,7 +655,7 @@ def run_thread(ang):
         (int, 0, 255, 3, ["Red", "Green", "Blue"])
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def draw_rectangle(sequence, offset_start=None, window_fraction=0.1, color=None, alpha=0.6):
     if offset_start is None:
         offset_start = 0, 0
@@ -802,7 +802,7 @@ def gauss_kernel(kernlen=21, nsig=3):
         (int, -1, 3, 1, "Channel"),
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def mean_filter(sequence, radius=1, channel_ind=0):
     size = 1 + 2 * radius
     # kernel = np.zeros((size, size)) / (size * size)
@@ -827,7 +827,7 @@ def mean_filter(sequence, radius=1, channel_ind=0):
         (int, -1, 0, 1, "Channel")
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def median_filter(sequence, dist=1, channel=0):
     size = 1 + 2 * dist
     kernel = np.zeros((size, size))
@@ -853,7 +853,7 @@ def median_filter(sequence, dist=1, channel=0):
         (float, 0.5, 10, 1, 'Distance exponent')
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def mask_color(sequence, color, max_dist=5, exponent=1):
     output = []
     for fr in sequence:
@@ -888,7 +888,7 @@ def mask_color(sequence, color, max_dist=5, exponent=1):
         (int, 0, 3, 1, "Channel"),
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
     size = 2 * radius + 1
     half = radius
@@ -920,7 +920,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 
 
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def mask_area(sequence, pos, max_dist=5):
     return
 
@@ -935,7 +935,7 @@ def mask_area(sequence, pos, max_dist=5):
         # (int, 0, 100, 1, "Keep value"),
         (bool, 0, 1, 1, "Debug")
 )
-@measure_time_decorator
+@measure_real_time_decorator
 def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
                            window_fraction=None, smoothing_frames=0, debug=False):
     if offset_start is None:
@@ -1050,7 +1050,7 @@ def track_template_in_sequence(
         (int, -100, 100, 2, ["X center offset", "Y center offset"]),
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def squerify(sequence, offset):
     pass
 
@@ -1060,7 +1060,7 @@ def squerify(sequence, offset):
         (float, 0, 100, 2, ['Vertical increase', 'Horizontal increase']),
 )
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def extend(sequence, increase):
     h, w, c = sequence[0].shape
 
@@ -1084,7 +1084,7 @@ def extend(sequence, increase):
 
 @SequenceModifiers.adder('add transparency')
 @sequence_adapter
-@measure_time_decorator
+@measure_real_time_decorator
 def add_transparency(sequence):
     h, w, c = sequence[0].shape
 

@@ -1,15 +1,14 @@
 import pytest
-import numpy as np
-import cv2
 
-from image_modifiers import (
-    resize_ratio, cycle_slide, _get_clip_dst_indexes, _get_clip_src_indexes,
-    color_blend, mono_color,
-    crop_image, max_image_size,
+from main.modules.modifiers_sequence import (
+    cycle_slide, cycle_slide_delay,
+    mono_color,
 )
-from image_modifiers import *
-
-from pytest import Module
+from main.modules.image_helpers import (
+    _get_clip_dst_indexes, _get_clip_src_indexes, get_overlay_indexes,
+    max_image_size,
+)
+from modifiers_image import *
 
 
 rita = cv2.imread("../unknown.png", 1)

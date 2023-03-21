@@ -6,9 +6,12 @@ import threading
 
 from tkinter.messagebox import showerror, showwarning
 
-from .image_modifiers import SequenceModifiers
+from main.modules.collectors import SequenceModifiers
 from .image_readers import read_gif, read_webp
 from yasiu_native.time import measure_real_time_decorator
+
+
+# SequenceModifiers = SequenceModSingleton()
 
 
 class Layer:

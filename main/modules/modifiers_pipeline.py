@@ -1,20 +1,17 @@
-from .image_modifiers import (
-    FunctionCollector, track_template_in_sequence, get_overlay_indexes,
-    sequence_sampler, blend_region,
+from .image_helpers import blend_region, get_overlay_indexes
 
-)
+from .modifiers_sequence import sequence_sampler, track_template_in_sequence
+from main.modules.collectors import PiplineModifiersSingleton
 
-from .image_layer import Layer
+from main.modules.image_layer import Layer
 
 import numpy as np
-import cv2
 
 
-PipeLineModifers = FunctionCollector()
-PipeLineModifers.type_ = 'pipe'
+PipeLineModifiers = PiplineModifiersSingleton()
 
 
-@PipeLineModifers.adder(
+@PipeLineModifiers.adder(
         "merge to new",
         (int, 0, 100, 1, "Output layer key"),
         (int, 0, 100, 1, "Base layer key"),
@@ -34,7 +31,7 @@ def merge_to_new(output_frames, layer_dict, dst_layer_key, base_key, overlay_key
     layer.apply_mods()
 
 
-@PipeLineModifers.adder(
+@PipeLineModifiers.adder(
         "Snap pic to Tracked region",
         (int, 0, 100, 1, "Base layer key"),
         (int, 0, 100, 1, "Overlay layer key"),
@@ -123,7 +120,7 @@ def snap_to_tracked_region(output_frames, layer_dict,
     dst_layer.apply_mods()
 
 
-@PipeLineModifers.adder(
+@PipeLineModifiers.adder(
         "merge to output",
         (int, 0, 100, 1, "Overlay layer key"),
 
@@ -133,7 +130,7 @@ def merge_to_output(output_frames, layer_dict, overlay_key):
     return output_frames
 
 
-@PipeLineModifers.adder(
+@PipeLineModifiers.adder(
         "replace output",
         (int, 0, 100, 1, "New layer key"),
 
@@ -141,3 +138,7 @@ def merge_to_output(output_frames, layer_dict, overlay_key):
 # @sequence_adapter
 def replace_output(output_frames, layer_dict, overlay_key):
     return layer_dict[overlay_key].output_frames
+
+
+print("Collected pipe mods:")
+print(PipeLineModifiers)

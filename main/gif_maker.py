@@ -10,15 +10,47 @@ from tkinter.messagebox import showwarning, showerror
 from modules.gui_builder import GuiBuilder
 from tkinter import Frame
 
-from functools import wraps
+# from functools import wraps
 from typing import Union
 import time
 
 from PIL import Image, GifImagePlugin
 
+# print("Importing instances!!!")
+from main.modules.collectors import (
+    SequenceModSingleton, PiplineModifiersSingleton, _instances,
+    # SequenceModifiers, PipeLineModifiers,
+)
+
+
+# print("Grabbing instances")
+SequenceModifiers = SequenceModSingleton()
+PipeLineModifiers = PiplineModifiersSingleton()
+# print("Grabbed.")
+
+# print("\nImport from: layer")
 from modules.image_layer import Layer
-from modules.image_modifiers import SequenceModifiers, max_image_size
-from modules.pipeline_modifiers import PipeLineModifers
+
+# print("\nImport from: sequence")
+from modules import modifiers_sequence
+
+# print("\nImport from: image")
+from modules import modifiers_image
+
+# print("Importing pipeline:")
+from modules import modifiers_pipeline
+# print("Imported pipeline")
+
+from main.modules.image_helpers import max_image_size
+
+
+# PipeLineModifers = SequenceModSingleton()
+# SequenceModifiers = PiplineModifiersSingleton()
+
+print("Imported everything.\n" * 5)
+print(SequenceModifiers)
+print(PipeLineModifiers)
+print(_instances.keys())
 
 from yasiu_native.time import measure_real_time_decorator
 
@@ -70,7 +102,7 @@ class GifClipApp(GuiBuilder):
     cycle_steps = 300
 
     "GUI"
-    update_interval = 15
+    update_interval = 30
 
     def __init__(self, height=900, width=1000, allow_load=True):
         super().__init__(height=height, width=width)
@@ -236,6 +268,7 @@ class GifClipApp(GuiBuilder):
             self.update_status("processing")
             self.apply_all_modifications()
             self.running_update = False
+            self.playback_position = 0
 
         if not self.running_update and not self.running_export:
             self.update_status("ready")
@@ -246,7 +279,7 @@ class GifClipApp(GuiBuilder):
         self._read_config_show_pic(self.display_config[0], self.preview_frames_list[0])
         self._read_config_show_pic(self.display_config[1], self.preview_frames_list[1])
 
-        self.playback_position = (self.playback_position + 1) % self.cycle_steps
+        self.playback_position = (self.playback_position + 1)  # % self.cycle_steps
 
     def _read_config_show_pic(self, config, img_frame):
         var, spin = config
@@ -287,9 +320,11 @@ class GifClipApp(GuiBuilder):
                 frames = lay.output_frames
 
         if frames:
-            out_pos = int(
-                    np.floor((self.playback_position / self.cycle_steps) * len(frames))
-            )
+            # out_pos = int(
+            #         np.floor((self.playback_position / self.cycle_steps) * len(frames))
+            # )
+            out_pos = self.playback_position % len(frames)
+
             out_pic = frames[out_pos]
             out_pic = max_image_size(out_pic, max_width=700, max_height=460)
             out_tk_pic = self.numpy_pic_to_tk(out_pic)
@@ -349,11 +384,12 @@ class GifClipApp(GuiBuilder):
             for mod_typ, mod, args in self.pipeline_mods_list:
                 if mod_typ == "modifier":
                     fn = SequenceModifiers[mod]
+                    # print(f"Applying: {fn}, {mod}")
                     output_frames = fn(output_frames, *args)
                     pipeline_steps.append(output_frames)
 
                 elif mod_typ == "pipe":
-                    fn = PipeLineModifers[mod]
+                    fn = PipeLineModifiers[mod]
                     # print("PipeMod no implement")
 
                     out = fn(output_frames, self.layers_dict, *args)
@@ -401,10 +437,12 @@ class GifClipApp(GuiBuilder):
     def change_refresh(self):
         ret = self.ask_user_for_integer("Refresh rate",
                                         f"Current refresh is {self.update_interval}. What should be new?")
-        if ret < 15:
-            showwarning("Minimal update is 15ms", "Minimal update time is 15ms")
-            ret = 15
-        self.update_interval = ret
+        if isinstance(ret, int):
+            if ret < 15:
+                showwarning("Warning", "Minimal update time changed to 15ms")
+                ret = 15
+
+            self.update_interval = ret
 
     def load_project(self):
         path = self.ask_user_for_config_file()
@@ -485,7 +523,7 @@ class GifClipApp(GuiBuilder):
 
                 mod_type, mod_name, params_list = all_mods_union[indkey]
                 if mod_type == "pipe":
-                    collector_instance = PipeLineModifers
+                    collector_instance = PipeLineModifiers
                 else:
                     collector_instance = SequenceModifiers
 
@@ -507,7 +545,7 @@ class GifClipApp(GuiBuilder):
 
         if allow_pipe_mods:
             add_tab(SequenceModifiers, "Filters")
-            add_tab(PipeLineModifers, "Pipe mods")
+            add_tab(PipeLineModifiers, "Pipe mods")
         else:
             add_tab(SequenceModifiers, "Filters")
 
@@ -619,7 +657,7 @@ class GifClipApp(GuiBuilder):
 
                 mod_type, name, storage_list = all_mods_union[ind]
                 if mod_type == "pipe":
-                    collector_instance = PipeLineModifers
+                    collector_instance = PipeLineModifiers
                 else:
                     collector_instance = SequenceModifiers
                 self._modifier_config(storage_list, name, collector_instance, title)

@@ -500,16 +500,16 @@ def overlap(sequence, overlap_fr):
     right = sequence[-frames:]
     main_part = sequence[frames:-frames]
 
-    print(f"Orig len: {len(sequence)}")
-    print(f"Len left: {len(left)}, right: {len(right)}, main: {len(main_part)}")
+    # print(f"Orig len: {len(sequence)}")
+    # print(f"Len left: {len(left)}, right: {len(right)}, main: {len(main_part)}")
     initial_seq = []
-    print(f"Overlaping frames: {frames}")
+    # print(f"Overlaping frames: {frames}")
 
     for fr_num in range(frames):
         alpha = (fr_num / (frames - 1))
         first = left[fr_num]  # astype(float)
         second = right[fr_num]  # astype(float)
-        print(f"Alpha: {alpha}")
+        # print(f"Alpha: {alpha}")
         # print(first.shape, second.shape)
         # print(1 - alpha)
 

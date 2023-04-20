@@ -37,6 +37,9 @@ class Layer:
             assert type(filters_list) is list, "Filters list is not list"
             self.filters_list = filters_list
 
+    def __len__(self):
+        return len(self.output_frames)
+
     def __repr__(self):
         return f"{self.__class__}: filters: `{self.source_file_path}`, loading:{self.is_loading}"
 

@@ -134,6 +134,7 @@ class GifClipApp(GuiBuilder):
         self.last_project_path = None
         self.last_export_path = None
         self.exp_settings = {}
+        self.last_thread = None
 
         if allow_load:
             self.load_settings()
@@ -238,9 +239,13 @@ class GifClipApp(GuiBuilder):
     def update_display(self):
         # print(f"Single update is: {self.run_single_update}")
         if self.go_quit:
+            # self.root.quit()
+            print("Last update canceled due to quit command.")
             return None
+
         th = threading.Thread(target=self._update_thread, )
         th.start()
+        self.last_thread = th
         # th = threading.Thread(target=self.thread, args=(1,))
         # th.start()
         self.root.after(self.update_interval, self.update_display)
@@ -255,12 +260,14 @@ class GifClipApp(GuiBuilder):
         Returns:
 
         """
+        if self.go_quit:
+            return
 
         if self.running_load:
             # print("Setting load")
             self.update_status("loading")
             self.check_if_all_are_loaded()
-            return None
+            return
 
         elif self.run_single_update and not self.running_update and not self.running_export:
             self.run_single_update = False
@@ -274,7 +281,7 @@ class GifClipApp(GuiBuilder):
             self.update_status("ready")
 
         if len(self.display_config) < 1:
-            return None
+            return
 
         self._read_config_show_pic(self.display_config[0], self.preview_frames_list[0])
         self._read_config_show_pic(self.display_config[1], self.preview_frames_list[1])
@@ -311,13 +318,27 @@ class GifClipApp(GuiBuilder):
                 lay = self.layers_dict[int_key]
                 frames = lay.orig_frames
 
-        else:
+        elif var_value == 4:
             "Layer out"
             if int_key not in self.layers_dict:
                 frames = None
             else:
                 lay = self.layers_dict[int_key]
                 frames = lay.output_frames
+        else:
+            if int_key not in self.layers_dict or len(self.layers_dict[int_key]) < 2:
+                return
+            else:
+                lay = self.layers_dict[int_key]
+                frames = lay.output_frames
+
+            two_frames = np.concatenate([frames[0], frames[-1]], axis=1)
+            # print(two_frames.shape, frames[0].shape)
+
+            out_pic = max_image_size(two_frames, max_width=900, max_height=460)
+            out_tk_pic = self.numpy_pic_to_tk(out_pic)
+            self.update_photo(img_frame, out_tk_pic)
+            return
 
         if frames:
             # out_pos = int(
@@ -845,6 +866,20 @@ class GifClipApp(GuiBuilder):
 
         wn.geometry(f"400x{height}")
 
+    def quit(self):
+        if not self.running_load:
+            self.save_settings()
+
+        print("Root quiting.")
+        self.go_quit = True
+
+        if self.last_thread:
+            self.last_thread.join()
+            print("Thread joined")
+            time.sleep(1)
+
+        self.root.quit()
+
     def make_preview_switch(self, parent, label=None):
         """
         Preview Layer input
@@ -877,7 +912,7 @@ class GifClipApp(GuiBuilder):
         #         # sp.state
 
         for num, text in enumerate(
-                ["Output", "Pipeline step", 'Layer input', 'Layer output'],
+                ["Output", "Pipeline step", 'Layer input', 'Layer output', 'First/Last frame'],
                 1
         ):
             rad1 = tk.Radiobutton(

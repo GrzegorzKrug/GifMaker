@@ -112,8 +112,8 @@ def crop_image(sequence, left: float, right: float, top: float, bottom: float):
 
 @SequenceModifiers.adder(
         'resize',
-        (int, 0.1, 15, 1, 'Scale Width'),
-        (int, 0.1, 15, 1, 'Scale Height'),
+        (float, 0.01, 15, 1, 'Scale Width'),
+        (float, 0.01, 15, 1, 'Scale Height'),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -122,6 +122,11 @@ def resize(sequence, scale_x=1.0, scale_y=1.0):
     h, w, c = orig.shape
     new_y = np.round(h * scale_y).astype(int)
     new_x = np.round(w * scale_x).astype(int)
+
+    if new_x < 1:
+        new_x = 1
+    if new_y < 1:
+        new_y = 1
     # print(f"Input resize: {h}, {w}")
 
     # if h >= w and res_typ == 'outer':

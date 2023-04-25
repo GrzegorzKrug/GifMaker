@@ -130,6 +130,7 @@ class Layer:
             self.output_frames = self.orig_frames
             return None
 
+        self.output_frames=[]
         output_frames = [fr.copy() for fr in self.orig_frames]
 
         for _, fil_name, arg in self.filters_list.copy():

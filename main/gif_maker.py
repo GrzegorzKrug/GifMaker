@@ -438,6 +438,7 @@ class GifClipApp(GuiBuilder):
     def load_any_sequence(self, path=None, layer_key=None, new_pr=False):
         if path is None:
             path = self.ask_user_for_any_file()
+            print(f"Loading path: {path}")
             if not path:
                 return None
 
@@ -870,13 +871,15 @@ class GifClipApp(GuiBuilder):
         if not self.running_load:
             self.save_settings()
 
-        print("Root quiting.")
+        print("Setting quit flag.")
         self.go_quit = True
 
         if self.last_thread:
             self.last_thread.join()
             print("Thread joined")
-            time.sleep(1)
+
+        time.sleep(1)
+        print("Sleep ended. root.quit()")
 
         self.root.quit()
 

@@ -292,17 +292,36 @@ def cycle_slide_delay(sequence: list, angle: float, delay: float):
 @SequenceModifiers.adder(
         'dynamic hue',
         # (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, -100, 100, 1, "Starting hue"),
+        (float, -180, 180, 1, "Starting hue"),
         (float, -100, 100, 1, "N cycles"),
         (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
-def dynamic_hue(sequence, color, n_cycles, alpha):
-    size = len(sequence)
-    output = [0] * size
+def dynamic_hue(sequence, hue_offset, n_cycles, alpha):
+    seq_size = len(sequence)
+    output = [0] * seq_size
 
-    hues = np.linspace(0, 180, size).round().astype(int)
-    colors = [0] * size
+    n_cycles = np.clip(int(n_cycles), 1, 100, dtype=int)
+
+    # hues = np.linspace(0, 180, size).round().astype(int)
+    hues = []
+    step_s = seq_size // n_cycles
+    for i in range(n_cycles):
+        if i == n_cycles - 1:
+            prev_sum = step_s * i
+            if prev_sum <= 0:
+                missing = seq_size
+            else:
+                missing = seq_size - prev_sum
+            row = np.linspace(0, 180, missing)
+        else:
+            row = np.linspace(0, 180, step_s)
+
+        hues = np.concatenate([hues, row])
+
+    hues = (np.array(hues) + int(hue_offset)) % 180
+
+    colors = [0] * seq_size
     for hi, h in enumerate(hues):
         mat = np.array([[[h, 255, 255]]], dtype=np.uint8)
 

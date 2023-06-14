@@ -130,8 +130,11 @@ class Layer:
             self.output_frames = self.orig_frames
             return None
 
-        self.output_frames=[]
-        output_frames = [fr.copy() for fr in self.orig_frames]
+        self.output_frames = []
+        # output_frames = [fr.copy() for fr in self.orig_frames]
+        # print(len(self.orig_frames))
+        output_frames = np.stack(self.orig_frames, dtype=np.uint8)
+        # print(f"Allocated: {output_frames.shape}")
 
         for _, fil_name, arg in self.filters_list.copy():
             fun = SequenceModifiers[fil_name]
@@ -143,7 +146,7 @@ class Layer:
 
             # for fri, fr in enumerate(self.preprocessed_frames):
             try:
-                print(f"Applying {fil_name}")
+                # print(f"Applying {fil_name}")
                 output_frames = fun(output_frames, *arg)
                 # output_frames[fri] = new_fr
             except Exception as err:

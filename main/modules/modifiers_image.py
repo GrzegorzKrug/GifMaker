@@ -458,7 +458,7 @@ def stack_channels_as_rgb(channels_list, labels, size=1.2):
 
 @SequenceModifiers.adder(
         'squerify',
-        (int, -100, 100, 1, "Center offset")
+        (int, -100, 100, 1, "Center offset [%]")
 )
 @image_adapter
 def squerify_interace(image, val):

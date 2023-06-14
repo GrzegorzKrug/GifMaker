@@ -243,12 +243,35 @@ class GifClipApp(GuiBuilder):
             print("Last update canceled due to quit command.")
             return None
 
+        self.update_status_box()
+
+        if self.last_thread:
+            self.last_thread.join()
+
         th = threading.Thread(target=self._update_thread, )
         th.start()
         self.last_thread = th
         # th = threading.Thread(target=self.thread, args=(1,))
         # th.start()
         self.root.after(self.update_interval, self.update_display)
+
+    def update_status_box(self):
+        if self.running_load:
+            # print("Setting load")
+            self.change_status("loading")
+            self.check_if_all_are_loaded()
+            return
+
+        elif self.run_single_update and not self.running_update and not self.running_export:
+            self.run_single_update = False
+            self.running_update = True
+            self.change_status("processing")
+            self.apply_all_modifications()
+            self.running_update = False
+            self.playback_position = 0
+
+        if not self.running_update and not self.running_export:
+            self.change_status("ready")
 
     # @measure_time
     def _update_thread(self, ):
@@ -260,25 +283,10 @@ class GifClipApp(GuiBuilder):
         Returns:
 
         """
+
         if self.go_quit:
+            print("Update canceled (Quit flag).")
             return
-
-        if self.running_load:
-            # print("Setting load")
-            self.update_status("loading")
-            self.check_if_all_are_loaded()
-            return
-
-        elif self.run_single_update and not self.running_update and not self.running_export:
-            self.run_single_update = False
-            self.running_update = True
-            self.update_status("processing")
-            self.apply_all_modifications()
-            self.running_update = False
-            self.playback_position = 0
-
-        if not self.running_update and not self.running_export:
-            self.update_status("ready")
 
         if len(self.display_config) < 1:
             return
@@ -326,13 +334,15 @@ class GifClipApp(GuiBuilder):
                 lay = self.layers_dict[int_key]
                 frames = lay.output_frames
         else:
+            "First and last layer"
             if int_key not in self.layers_dict or len(self.layers_dict[int_key]) < 2:
                 return
             else:
                 lay = self.layers_dict[int_key]
                 frames = lay.output_frames
 
-            two_frames = np.concatenate([frames[0], frames[-1]], axis=1)
+            stacked = (frames[0] / 2 + frames[-1] / 2).round().astype(np.uint8)
+            two_frames = np.concatenate([frames[0], frames[-1], stacked], axis=1)
             # print(two_frames.shape, frames[0].shape)
 
             out_pic = max_image_size(two_frames, max_width=900, max_height=460)
@@ -340,7 +350,7 @@ class GifClipApp(GuiBuilder):
             self.update_photo(img_frame, out_tk_pic)
             return
 
-        if frames:
+        if len(frames) > 0:
             # out_pos = int(
             #         np.floor((self.playback_position / self.cycle_steps) * len(frames))
             # )
@@ -430,10 +440,19 @@ class GifClipApp(GuiBuilder):
         self.last_process_time = tend - t0
 
     def change_picture(self):
-        curr_lay = self.active_layer
-        filters = self.layers_dict[curr_lay]
+        # curr_lay = self.active_layer
+        num = self.ask_user_for_integer("Layer", "Which layer to change?")
+        print(f"Selected: {num}")
+        if num not in self.layers_dict:
+            text = f"Selected layer does not exist. Got: {list(self.layers_dict.keys())}"
+            showerror("Wrong number", text)
+            return None
+        else:
+            curr_lay = num
+
+        keep_filters = self.layers_dict[curr_lay]
         self.load_any_sequence()
-        self.layers_dict[curr_lay].filters_list = filters
+        self.layers_dict[curr_lay].filters_list = keep_filters
 
     def load_any_sequence(self, path=None, layer_key=None, new_pr=False):
         if path is None:
@@ -875,13 +894,19 @@ class GifClipApp(GuiBuilder):
         self.go_quit = True
 
         if self.last_thread:
+            print("Waiting for thread to join")
             self.last_thread.join()
+            # self.last_thread.kil()
             print("Thread joined")
+            # print("Thread ignored")
 
         time.sleep(1)
         print("Sleep ended. root.quit()")
 
         self.root.quit()
+        print("Root has quit.")
+        self.root.destroy()
+        print("Root has been destroyed.")
 
     def make_preview_switch(self, parent, label=None):
         """
@@ -968,8 +993,7 @@ class GifClipApp(GuiBuilder):
 
         return fr
 
-    def update_status(self, up_type="processing"):
-        # print("Updating status.")
+    def change_status(self, up_type="processing"):
         up_type = up_type.lower()
         if up_type == "processing":
             self.status_label.config(text="Processing", bg="#811", fg="#DDD")
@@ -988,6 +1012,7 @@ class GifClipApp(GuiBuilder):
             # print("status export:")
 
         else:
+            print(f"VALUE ERRRO : {up_type}")
             raise ValueError(f"Key does not match update option: {up_type}")
 
     def export_as(self):
@@ -1042,7 +1067,7 @@ class GifClipApp(GuiBuilder):
 
         if self.last_export_path:
             self.running_export = True
-            self.update_status("exporting")
+            self.change_status("exporting")
             th = threading.Thread(target=self._export_thread)
             th.start()
 
@@ -1106,7 +1131,7 @@ def build_GifGui():
 
     gui.add_menu([
             ("New layer", gui.load_any_sequence),
-            ("Change pic in layer", gui.load_any_sequence),
+            ("Change pic in layer", gui.change_picture),
             # ("Layers", None),
     ], name="Layer")
 

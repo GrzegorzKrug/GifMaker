@@ -34,7 +34,7 @@ def image_adapter(func):
         if isinstance(source, np.ndarray) and len(source.shape) == 4:
             "4D numpy"
             res_list = [func(img, *a, **kw) for img in source]
-            res_list = [img.reshpape(1, *img.shape) for img in res_list]
+            res_list = [img.reshape(1, *img.shape) for img in res_list]
             res = np.concatenate(res_list, axis=0)
 
         elif isinstance(source, list):

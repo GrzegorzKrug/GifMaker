@@ -1,6 +1,7 @@
 import tkinter as tk
 import tkinter.ttk
 
+import os
 import numpy as np
 import threading
 
@@ -135,6 +136,8 @@ class GifClipApp(GuiBuilder):
         self.last_export_path = None
         self.exp_settings = {}
         self.last_thread = None
+        self.last_folder_used = None
+        self.apply_thread = None
 
         if allow_load:
             self.load_settings()
@@ -245,17 +248,28 @@ class GifClipApp(GuiBuilder):
 
         self.update_status_box()
 
-        if self.last_thread:
-            self.last_thread.join()
+        # if self.last_thread:
+        #     self.last_thread.close()
+        #     self.last_thread.join()
 
-        th = threading.Thread(target=self._update_thread, )
-        th.start()
-        self.last_thread = th
-        # th = threading.Thread(target=self.thread, args=(1,))
-        # th.start()
+        if self.last_thread and not self.last_thread.is_alive():
+            self.last_thread = None
+
+        if self.last_thread is None:
+            th = threading.Thread(target=self._update_thread, )
+            th.start()
+            self.last_thread = th
+        else:
+            pass
+            # print("Waiting for thread")
+
         self.root.after(self.update_interval, self.update_display)
 
     def update_status_box(self):
+        if self.apply_thread and not self.apply_thread.is_alive():
+            print("Clear apply thread -> None")
+            self.apply_thread = None
+
         if self.running_load:
             # print("Setting load")
             self.change_status("loading")
@@ -266,6 +280,12 @@ class GifClipApp(GuiBuilder):
             self.run_single_update = False
             self.running_update = True
             self.change_status("processing")
+
+            if self.apply_thread is None:
+                # th = threading.Thread(target=self.apply_all_modifications)
+                # th.start()
+                # self.apply_thread = th
+                pass
             self.apply_all_modifications()
             self.running_update = False
             self.playback_position = 0
@@ -438,6 +458,8 @@ class GifClipApp(GuiBuilder):
 
         tend = time.perf_counter()
         self.last_process_time = tend - t0
+        # self.running_update = False
+        # self.playback_position = 0
 
     def change_picture(self):
         # curr_lay = self.active_layer
@@ -456,8 +478,11 @@ class GifClipApp(GuiBuilder):
 
     def load_any_sequence(self, path=None, layer_key=None, new_pr=False):
         if path is None:
-            path = self.ask_user_for_any_file()
+            last_folder = self.last_folder_used
+            path = self.ask_user_for_any_file(last_folder)
             print(f"Loading path: {path}")
+            self.last_folder_used = os.path.dirname(path)
+            print(f"Set last folder to: {self.last_folder_used}")
             if not path:
                 return None
 
@@ -486,7 +511,8 @@ class GifClipApp(GuiBuilder):
             self.update_interval = ret
 
     def load_project(self):
-        path = self.ask_user_for_config_file()
+
+        path = self.ask_user_for_config_file(initdir=self.last_folder_used)
         self.load_settings(path)
         self.last_project_path = None
 
@@ -497,7 +523,7 @@ class GifClipApp(GuiBuilder):
         self.save_settings()
 
     def save_project_as(self):
-        path = self.ask_user_for_save_config_file()
+        path = self.ask_user_for_save_config_file(self.last_folder_used)
         if not path.endswith(self.cfg_extension):
             path += self.cfg_extension
 
@@ -1016,7 +1042,11 @@ class GifClipApp(GuiBuilder):
             raise ValueError(f"Key does not match update option: {up_type}")
 
     def export_as(self):
-        new_path = tk.filedialog.asksaveasfilename(filetypes=self.GIF_TYPES)
+        # print(f"Export path: folder: {self.last_folder_used}")
+        new_path = tk.filedialog.asksaveasfilename(
+                filetypes=self.GIF_TYPES,
+                initialdir=self.last_folder_used,
+        )
         if not (new_path.endswith("gif") or new_path.endswith("GIF")):
             new_path += ".gif"
 

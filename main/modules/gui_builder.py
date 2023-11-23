@@ -195,7 +195,8 @@ class GuiBuilder(ABC):
                 fr = tk.Frame(parent)
                 ref = ob(fr, *arg, **kw)
 
-                if ob in [tk.Button, tk.Frame, tk.Label, tk.LabelFrame, tk.Listbox, tk.Spinbox,tk.Checkbutton]:
+                if ob in [tk.Button, tk.Frame, tk.Label, tk.LabelFrame, tk.Listbox, tk.Spinbox,
+                          tk.Checkbutton]:
                     ref.pack(fill='both')
 
                 # print(f"Packing: {ob}")
@@ -288,10 +289,12 @@ class GuiBuilder(ABC):
             print("Invalid file")
 
     @staticmethod
-    def ask_user_for_any_file():
+    def ask_user_for_any_file(path=None):
+        if path is None:
+            path = os.path.dirname(__file__)
         ret = tk.filedialog.askopenfilename(
                 # filetypes=self.ANY_TYPE,
-                initialdir=os.path.dirname(__file__)
+                initialdir=path,
         )
         return ret
 
@@ -300,17 +303,23 @@ class GuiBuilder(ABC):
         ret = tk.simpledialog.askinteger(title, question)
         return ret
 
-    def ask_user_for_config_file(self):
+    def ask_user_for_config_file(self, initdir=None):
+        if initdir is None:
+            initdir = os.path.dirname(__file__)
+
         ret = tk.filedialog.askopenfilename(
                 filetypes=self.CONFIG_TYPES,
-                initialdir=os.path.dirname(__file__)
+                initialdir=initdir,
         )
         return ret
 
-    def ask_user_for_save_config_file(self):
+    def ask_user_for_save_config_file(self, initdir=None):
+        if initdir is None:
+            initdir = os.path.dirname(__file__)
+
         ret = tk.filedialog.asksaveasfilename(
                 filetypes=self.CONFIG_TYPES,
-                initialdir=os.path.dirname(__file__)
+                initialdir=initdir,
         )
         return ret
 

@@ -1,9 +1,9 @@
 from .image_helpers import blend_region, get_overlay_indexes
 
 from .modifiers_sequence import sequence_sampler, track_template_in_sequence
-from main.modules.collectors import PiplineModifiersSingleton
+from modules.collectors import PiplineModifiersSingleton
 
-from main.modules.image_layer import Layer
+from modules.image_layer import Layer
 
 import numpy as np
 

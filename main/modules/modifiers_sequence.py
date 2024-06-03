@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 from yasiu_native.time import measure_real_time_decorator
 
-from main.modules.adapters import sequence_adapter
-from main.modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes
-from main.modules.math_functions import moving_average
-from main.modules.collectors import SequenceModSingleton
+from modules.adapters import sequence_adapter
+from modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes
+from modules.math_functions import moving_average
+from modules.collectors import SequenceModSingleton
 
 
 SequenceModifiers = SequenceModSingleton()

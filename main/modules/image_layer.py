@@ -6,8 +6,8 @@ import threading
 
 from tkinter.messagebox import showerror, showwarning
 
-from main.modules.collectors import SequenceModifiers
-from .image_readers import read_gif, read_webp
+from modules.collectors import SequenceModifiers
+from modules.image_readers import read_gif, read_webp
 from yasiu_native.time import measure_real_time_decorator
 
 

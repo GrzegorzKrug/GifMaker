@@ -7,14 +7,14 @@ from scipy import stats as st
 
 import imutils
 
-from main.modules.adapters import image_adapter, sequence_adapter
-from main.modules.collectors import SequenceModSingleton
+from modules.adapters import image_adapter, sequence_adapter
+from modules.collectors import SequenceModSingleton
 from yasiu_native.time import measure_real_time_decorator
 
 from yasiu_image.image import squerify
 from yasiu_image.filters import mirror
 
-from main.modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes, blend_region
+from modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes, blend_region
 
 
 def layer_validator(fn):

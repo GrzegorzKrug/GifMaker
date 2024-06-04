@@ -82,73 +82,80 @@ def reverse(sequence, append=True):
     (float, -180, 360, 1, 'Direction')
 )
 def cycle_slide(sequence: list, angle: float):
+    if angle < 0:
+        angle += 360
     sequence = [fr.copy() for fr in sequence]
     height, width, c = sequence[0].shape
-    N = len(sequence)
+    seq_size = len(sequence)
     rads = np.pi * angle / 180
 
     sn = np.sin(rads)
     cs = np.cos(rads)
 
-    x_comp = 0
-    y_comp = 0
+    end_compensation_A = 0
+    end_compensation_B = 0
     is_horiz = False
 
-    if angle <= 45 or 315 < angle <= 360:
-        if angle == 0 or angle == 360:
-            yend = 0
-        else:
-            yend = -height * sn
-        xsteps = np.linspace(0, width, N + 1)[:-1]
-        ysteps = np.linspace(0, yend, N)
+    yend = abs(height * sn)
+    xend = abs(width * cs)
+
+    moded_angle = angle if angle <= 180 else angle-180
+    # Reduce circle to half circ for single if statment check.
+    if not (45 <= moded_angle < (90+45)):
+        "Horiz movement is on edges"
         is_horiz = True
-        y_comp = yend
 
-    elif angle <= 135:
-        if angle == 90:
-            xend = 0
-        else:
-            xend = -width * cs
-
-        xsteps = np.linspace(0, xend, N)
-        ysteps = np.linspace(0, height, N + 1)[:-1]
-        x_comp = xend
-
-    elif angle <= 225:
-        if angle == 180:
-            yend = 0
-        else:
-            yend = -height * sn
-        xsteps = np.linspace(width, 0, N + 1)[:1]
-        ysteps = np.linspace(0, yend, N)
-        is_horiz = True
-        # y_comp = height + yend
-        # x_comp = height - yend
-        x_comp = -height * sn
-        y_comp = 0
-
-    elif angle <= 315:
-        if angle == 270:
-            xend = 0
-        else:
-            xend = -width * cs
-        # xsteps = np.linspace(0, xend, N + 1)[:-1]
-        xsteps = np.linspace(0, xend, N)
-        ysteps = np.linspace(height, 0, N + 1)[:1]
-        x_comp = 0
-        y_comp = -width * cs
-
+    if is_horiz:
+        end_compensation_A = abs(np.round(height*sn).astype(int))
+        if 180 < angle < 270 or 0 < angle < 90:
+            end_compensation_B = end_compensation_A
+            end_compensation_A = 0
     else:
-        print("WHAT?!")
-        raise ValueError(f"wrong angle: {angle}")
+        end_compensation_B = abs(np.round(width*cs).astype(int))
+        if 0 < angle < 90 or 180 < angle < 270:
+            end_compensation_A = end_compensation_B
+            end_compensation_B = 0
 
-    xsteps = np.floor(xsteps).astype(int)
-    ysteps = np.floor(ysteps).astype(int)
-    x_comp = np.round(x_comp).astype(int)
-    y_comp = np.round(y_comp).astype(int)
-    # print(f"Ang: {angle}, X comp: {x_comp}, y comp: {y_comp}")
+    if 90 <= angle <= 270:
+        "Left move"
+        xsteps = np.linspace(xend, 0, seq_size)
+    else:
+        xsteps = np.linspace(0, xend, seq_size)
+
+    if 0 <= angle <= 180:
+        "Up move"
+        ysteps = np.linspace(yend, 0, seq_size)
+    else:
+        ysteps = np.linspace(0, yend, seq_size)
+
+    "Define full cycle move on axis"
+    if is_horiz:
+        if (90+45) <= angle < (180+45):
+            # LEFT MOVE
+            xsteps = np.linspace(0, width, seq_size)
+        else:
+            xsteps = np.linspace(width, 0, seq_size)
+    else:
+        if (0+45) <= angle < (90+45):
+            ysteps = np.linspace(0, height, seq_size)
+        else:
+            ysteps = np.linspace(height, 0, seq_size)
+
+    xsteps = np.round(xsteps).astype(int)
+    ysteps = np.round(ysteps).astype(int)
+
+    print(f"Angle: {angle}")
+    # print(f"Moded angle: {moded_angle}")
+    # print(f"Horizonal fix?: {is_horiz}")
+    # print("Przesunięcia X:")
+    # print(xsteps)
+    # print("Przesunięcia Y:")
+    # print(ysteps)
+    print(f"End compensation A: {end_compensation_A}")
+    print(f"End compensation B: {end_compensation_B}")
 
     for ind, (fr, x_off, y_off) in enumerate(zip(sequence, xsteps, ysteps)):
+        "2D roll with next frame compensation"
         if is_horiz:
             if x_off <= 0:
                 continue
@@ -156,8 +163,8 @@ def cycle_slide(sequence: list, angle: float):
             right = fr[:, :x_off]
 
             if y_off != 0:
-                left = np.roll(left, y_off - x_comp, axis=0)
-                right = np.roll(right, y_off - y_comp, axis=0)
+                left = np.roll(left, y_off - end_compensation_A, axis=0)
+                right = np.roll(right, y_off - end_compensation_B, axis=0)
 
             sequence[ind] = np.concatenate([left, right], axis=1)
 
@@ -168,9 +175,8 @@ def cycle_slide(sequence: list, angle: float):
             bottom = fr[:y_off, :]
 
             if x_off != 0:
-                # print(f"X != 0: {x_off}")
-                top = np.roll(top, x_off - y_comp, axis=1)
-                bottom = np.roll(bottom, x_off - x_comp, axis=1)
+                top = np.roll(top, x_off - end_compensation_B, axis=1)
+                bottom = np.roll(bottom, x_off - end_compensation_A, axis=1)
 
             sequence[ind] = np.concatenate([top, bottom], axis=0)
 

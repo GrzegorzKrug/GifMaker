@@ -376,7 +376,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 
 @SequenceModifiers.adder(
         'extend',
-        (float, 0, 100, 2, ['Vertical increase', 'Horizontal increase']),
+        (int, -500, 500, 2, ['Vertical pixel', 'Horizontal pixel']),
 )
 @sequence_adapter
 @measure_real_time_decorator

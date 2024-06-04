@@ -125,7 +125,6 @@ def snap_to_tracked_region(output_frames, layer_dict,
         (int, 0, 100, 1, "Overlay layer key"),
 
 )
-# @sequence_adapter
 def merge_to_output(output_frames, layer_dict, overlay_key):
     return output_frames
 
@@ -135,7 +134,6 @@ def merge_to_output(output_frames, layer_dict, overlay_key):
         (int, 0, 100, 1, "New layer key"),
 
 )
-# @sequence_adapter
 def replace_output(output_frames, layer_dict, overlay_key):
     return layer_dict[overlay_key].output_frames
 

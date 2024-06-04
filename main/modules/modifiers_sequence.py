@@ -12,11 +12,11 @@ SequenceModifiers = SequenceModSingleton()
 
 
 @SequenceModifiers.adder(
-        'sequence sampler',
-        (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
-        (int, 1, 99999, 1, 'N output frames'),
-        (float, -999, 999, 1, 'Non linear variable'),
-        (float, 0, 500, 1, "Ratio [%] sample")
+    'sequence sampler',
+    (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
+    (int, 1, 99999, 1, 'N output frames'),
+    (float, -999, 999, 1, 'Non linear variable'),
+    (float, 0, 500, 1, "Ratio [%] sample")
 
 )
 @sequence_adapter
@@ -52,8 +52,8 @@ def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ra
 
 
 @SequenceModifiers.adder(
-        'repeat',
-        (int, 1, 99999, 1, 'N times'),
+    'repeat',
+    (int, 1, 99999, 1, 'N times'),
 )
 def repeat_sequence(im_ob, repeat):
     frames = [fr for _ in range(repeat) for fr in im_ob]
@@ -62,8 +62,8 @@ def repeat_sequence(im_ob, repeat):
 
 
 @SequenceModifiers.adder(
-        'reverse',
-        (bool, 0, 1, 1, "Append reversed")
+    'reverse',
+    (bool, 0, 1, 1, "Append reversed")
 )
 def reverse(sequence, append=True):
     new_sequence = [fr.copy() for fr in sequence]
@@ -76,10 +76,10 @@ def reverse(sequence, append=True):
 
 
 @SequenceModifiers.adder(
-        'slide cycle',
-        # (str, 'all', ['all', 'linear'], 1, 'Mode'),
-        # (int, 1, 99999, 1, 'N frames'),
-        (float, 0, 360, 1, 'Direction')
+    'slide cycle',
+    # (str, 'all', ['all', 'linear'], 1, 'Mode'),
+    # (int, 1, 99999, 1, 'N frames'),
+    (float, -180, 360, 1, 'Direction')
 )
 def cycle_slide(sequence: list, angle: float):
     sequence = [fr.copy() for fr in sequence]
@@ -179,11 +179,11 @@ def cycle_slide(sequence: list, angle: float):
 
 
 @SequenceModifiers.adder(
-        'slide delay',
-        # (str, 'all', ['all', 'linear'], 1, 'Mode'),
-        # (int, 1, 99999, 1, 'N frames'),
-        (float, 0, 360, 1, 'Direction'),
-        (float, 0, 360, 1, 'Delay')
+    'slide delay',
+    # (str, 'all', ['all', 'linear'], 1, 'Mode'),
+    # (int, 1, 99999, 1, 'N frames'),
+    (float, 0, 360, 1, 'Direction'),
+    (float, 0, 360, 1, 'Delay')
 )
 def cycle_slide_delay(sequence: list, angle: float, delay: float):
     sequence = [fr.copy() for fr in sequence]
@@ -290,11 +290,11 @@ def cycle_slide_delay(sequence: list, angle: float, delay: float):
 
 
 @SequenceModifiers.adder(
-        'dynamic hue',
-        # (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, -180, 180, 1, "Starting hue"),
-        (float, -100, 100, 1, "N cycles"),
-        (float, 0, 1, 1, "Alpha"),
+    'dynamic hue',
+    # (int, 0, 255, 3, ["Red", "Green", "Blue"]),
+    (float, -180, 180, 1, "Starting hue"),
+    (float, -100, 100, 1, "N cycles"),
+    (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
 def dynamic_hue(sequence, hue_offset, n_cycles, alpha):
@@ -337,9 +337,9 @@ def dynamic_hue(sequence, hue_offset, n_cycles, alpha):
 
 
 @SequenceModifiers.adder(
-        'time clip',
-        (float, 0, 100, 1, "Start 100%"),
-        (float, 0, 100, 1, "End 100%")
+    'time clip',
+    (float, 0, 100, 1, "Start 100%"),
+    (float, 0, 100, 1, "End 100%")
 )
 @measure_real_time_decorator
 def clip_sequence(sequence, start: float, stop: float):
@@ -352,14 +352,14 @@ def clip_sequence(sequence, start: float, stop: float):
 
 
 @SequenceModifiers.adder(
-        "snap point to location",
-        (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
-        (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),
-        (float, 0, 100, 1, "Frame [%] position"),
-        (float, 0, 50, 1, "Template [%] size"),
-        (int, 0, 100, 1, "Smoothing distance"),
-        # (int, 0, 100, 1, "Keep value"),
-        (bool, 0, 1, 1, "Debug")
+    "snap point to location",
+    (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
+    (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),
+    (float, 0, 100, 1, "Frame [%] position"),
+    (float, 0, 50, 1, "Template [%] size"),
+    (int, 0, 100, 1, "Smoothing distance"),
+    # (int, 0, 100, 1, "Keep value"),
+    (bool, 0, 1, 1, "Debug")
 )
 @measure_real_time_decorator
 def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
@@ -376,12 +376,13 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
     window_fraction /= 200
 
     h, w, c = sequence[0].shape
-    point_end = (np.array([offset_end[0] / 200, offset_end[1] / 200], dtype=float) + 0.5)
+    point_end = (
+        np.array([offset_end[0] / 200, offset_end[1] / 200], dtype=float) + 0.5)
     point_end = (point_end * (w, h)).round().astype(int)
 
     posx, posy, template, window_size = track_template_in_sequence(
-            sequence, offset_start, start_fr, window_fraction,
-            smoothing_frames,
+        sequence, offset_start, start_fr, window_fraction,
+        smoothing_frames,
     )
 
     if debug:
@@ -432,7 +433,8 @@ def track_template_in_sequence(
 
 ):
     h, w, c = sequence[0].shape
-    point_start = (np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
+    point_start = (
+        np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
     point_start = (point_start * (w, h)).round().astype(int)
     inner_size = min([h, w])
     window_size = np.round(1 + 2 * (window_fraction * inner_size)).astype(int)
@@ -443,7 +445,7 @@ def track_template_in_sequence(
     frame = sequence[sample_ind]
 
     template = frame[point_start[1] - window_size // 2:point_start[1] + window_size // 2 + 1,
-               point_start[0] - window_size // 2:point_start[0] + window_size // 2 + 1]
+                     point_start[0] - window_size // 2:point_start[0] + window_size // 2 + 1]
     # plt.imshow(template)
     # plt.show()
     # output = []
@@ -472,9 +474,9 @@ def track_template_in_sequence(
 
 
 @SequenceModifiers.adder(
-        'monocolor',
-        (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, 0, 1, 1, "Alpha"),
+    'monocolor',
+    (int, 0, 255, 3, ["Red", "Green", "Blue"]),
+    (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
 def mono_color(sequence, color, alpha):
@@ -505,8 +507,8 @@ def mono_color(sequence, color, alpha):
 
 
 @SequenceModifiers.adder(
-        'overlap',
-        (int, 0, 50, 1, "Overlap [%]")
+    'overlap',
+    (int, 0, 50, 1, "Overlap [%]")
 )
 @sequence_adapter
 def overlap(sequence, overlap_fr):
@@ -532,7 +534,8 @@ def overlap(sequence, overlap_fr):
         # print(first.shape, second.shape)
         # print(1 - alpha)
 
-        new_fr = cv2.addWeighted(first, alpha, second, 1 - alpha, 0).round().astype(np.uint8)
+        new_fr = cv2.addWeighted(first, alpha, second,
+                                 1 - alpha, 0).round().astype(np.uint8)
         # new_fr =
         initial_seq.append(new_fr)
 

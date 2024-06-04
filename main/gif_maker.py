@@ -253,7 +253,7 @@ class GifClipApp(GuiBuilder):
         #     self.last_thread.close()
         #     self.last_thread.join()
 
-        if self.last_thread and not self.last_thread.is_alive():
+        if self.last_thread is not None and not self.last_thread.is_alive():
             self.last_thread = None
 
         if self.last_thread is None:

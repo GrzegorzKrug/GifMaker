@@ -3,7 +3,7 @@ from typing import Union
 import cv2
 import numpy as np
 
-from main.modules.adapters import sequence_adapter
+from modules.adapters import sequence_adapter
 
 
 def _get_clip_src_indexes(cur_offset, size):

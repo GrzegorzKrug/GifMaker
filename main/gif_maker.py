@@ -5,7 +5,8 @@ import os
 import numpy as np
 import threading
 
-from tkinter import Label, LabelFrame, Button
+
+from tkinter import LabelFrame, Button, Label
 from tkinter.messagebox import showwarning, showerror
 
 from modules.gui_builder import GuiBuilder
@@ -18,7 +19,7 @@ import time
 from PIL import Image, GifImagePlugin
 
 # print("Importing instances!!!")
-from main.modules.collectors import (
+from modules.collectors import (
     SequenceModSingleton, PiplineModifiersSingleton, _instances,
     # SequenceModifiers, PipeLineModifiers,
 )
@@ -42,7 +43,7 @@ from modules import modifiers_image
 from modules import modifiers_pipeline
 # print("Imported pipeline")
 
-from main.modules.image_helpers import max_image_size
+from modules.image_helpers import max_image_size
 
 
 # PipeLineModifers = SequenceModSingleton()
@@ -231,9 +232,9 @@ class GifClipApp(GuiBuilder):
         frame = LabelFrame(parent)
         frame.pack(expand=True, fill='both')
 
-        lb = Label(frame, text=text)
+        lb = tk.Label(frame, text=text)
         lb.pack()
-        lb = Label(frame)
+        lb = tk.Label(frame)
         lb.pack(expand=True, fill='both')
         self.preview_frames_list.append(lb)
 

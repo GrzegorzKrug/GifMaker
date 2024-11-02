@@ -12,11 +12,11 @@ SequenceModifiers = SequenceModSingleton()
 
 
 @SequenceModifiers.adder(
-        'sequence sampler',
-        (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
-        (int, 1, 99999, 1, 'N output frames'),
-        (float, -999, 999, 1, 'Non linear variable'),
-        (float, 0, 500, 1, "Ratio [%] sample")
+    'sequence sampler',
+    (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
+    (int, 1, 99999, 1, 'N output frames'),
+    (float, -999, 999, 1, 'Non linear variable'),
+    (float, 0, 500, 1, "Ratio [%] sample")
 
 )
 @sequence_adapter
@@ -52,8 +52,8 @@ def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ra
 
 
 @SequenceModifiers.adder(
-        'repeat',
-        (int, 1, 99999, 1, 'N times'),
+    'repeat',
+    (int, 1, 99999, 1, 'N times'),
 )
 def repeat_sequence(im_ob, repeat):
     frames = [fr for _ in range(repeat) for fr in im_ob]
@@ -62,8 +62,8 @@ def repeat_sequence(im_ob, repeat):
 
 
 @SequenceModifiers.adder(
-        'reverse',
-        (bool, 0, 1, 1, "Append reversed")
+    'reverse',
+    (bool, 0, 1, 1, "Append reversed")
 )
 def reverse(sequence, append=True):
     new_sequence = [fr.copy() for fr in sequence]
@@ -76,79 +76,86 @@ def reverse(sequence, append=True):
 
 
 @SequenceModifiers.adder(
-        'slide cycle',
-        # (str, 'all', ['all', 'linear'], 1, 'Mode'),
-        # (int, 1, 99999, 1, 'N frames'),
-        (float, 0, 360, 1, 'Direction')
+    'slide cycle',
+    # (str, 'all', ['all', 'linear'], 1, 'Mode'),
+    # (int, 1, 99999, 1, 'N frames'),
+    (float, -180, 360, 1, 'Direction')
 )
 def cycle_slide(sequence: list, angle: float):
+    if angle < 0:
+        angle += 360
     sequence = [fr.copy() for fr in sequence]
     height, width, c = sequence[0].shape
-    N = len(sequence)
+    seq_size = len(sequence)
     rads = np.pi * angle / 180
 
     sn = np.sin(rads)
     cs = np.cos(rads)
 
-    x_comp = 0
-    y_comp = 0
+    end_compensation_A = 0
+    end_compensation_B = 0
     is_horiz = False
 
-    if angle <= 45 or 315 < angle <= 360:
-        if angle == 0 or angle == 360:
-            yend = 0
-        else:
-            yend = -height * sn
-        xsteps = np.linspace(0, width, N + 1)[:-1]
-        ysteps = np.linspace(0, yend, N)
+    yend = abs(height * sn)
+    xend = abs(width * cs)
+
+    moded_angle = angle if angle <= 180 else angle-180
+    # Reduce circle to half circ for single if statment check.
+    if not (45 <= moded_angle < (90+45)):
+        "Horiz movement is on edges"
         is_horiz = True
-        y_comp = yend
 
-    elif angle <= 135:
-        if angle == 90:
-            xend = 0
-        else:
-            xend = -width * cs
-
-        xsteps = np.linspace(0, xend, N)
-        ysteps = np.linspace(0, height, N + 1)[:-1]
-        x_comp = xend
-
-    elif angle <= 225:
-        if angle == 180:
-            yend = 0
-        else:
-            yend = -height * sn
-        xsteps = np.linspace(width, 0, N + 1)[:1]
-        ysteps = np.linspace(0, yend, N)
-        is_horiz = True
-        # y_comp = height + yend
-        # x_comp = height - yend
-        x_comp = -height * sn
-        y_comp = 0
-
-    elif angle <= 315:
-        if angle == 270:
-            xend = 0
-        else:
-            xend = -width * cs
-        # xsteps = np.linspace(0, xend, N + 1)[:-1]
-        xsteps = np.linspace(0, xend, N)
-        ysteps = np.linspace(height, 0, N + 1)[:1]
-        x_comp = 0
-        y_comp = -width * cs
-
+    if is_horiz:
+        end_compensation_A = abs(np.round(height*sn).astype(int))
+        if 180 < angle < 270 or 0 < angle < 90:
+            end_compensation_B = end_compensation_A
+            end_compensation_A = 0
     else:
-        print("WHAT?!")
-        raise ValueError(f"wrong angle: {angle}")
+        end_compensation_B = abs(np.round(width*cs).astype(int))
+        if 0 < angle < 90 or 180 < angle < 270:
+            end_compensation_A = end_compensation_B
+            end_compensation_B = 0
 
-    xsteps = np.floor(xsteps).astype(int)
-    ysteps = np.floor(ysteps).astype(int)
-    x_comp = np.round(x_comp).astype(int)
-    y_comp = np.round(y_comp).astype(int)
-    # print(f"Ang: {angle}, X comp: {x_comp}, y comp: {y_comp}")
+    if 90 <= angle <= 270:
+        "Left move"
+        xsteps = np.linspace(xend, 0, seq_size)
+    else:
+        xsteps = np.linspace(0, xend, seq_size)
+
+    if 0 <= angle <= 180:
+        "Up move"
+        ysteps = np.linspace(yend, 0, seq_size)
+    else:
+        ysteps = np.linspace(0, yend, seq_size)
+
+    "Define full cycle move on axis"
+    if is_horiz:
+        if (90+45) <= angle < (180+45):
+            # LEFT MOVE
+            xsteps = np.linspace(0, width, seq_size)
+        else:
+            xsteps = np.linspace(width, 0, seq_size)
+    else:
+        if (0+45) <= angle < (90+45):
+            ysteps = np.linspace(0, height, seq_size)
+        else:
+            ysteps = np.linspace(height, 0, seq_size)
+
+    xsteps = np.round(xsteps).astype(int)
+    ysteps = np.round(ysteps).astype(int)
+
+    print(f"Angle: {angle}")
+    # print(f"Moded angle: {moded_angle}")
+    # print(f"Horizonal fix?: {is_horiz}")
+    # print("Przesunięcia X:")
+    # print(xsteps)
+    # print("Przesunięcia Y:")
+    # print(ysteps)
+    print(f"End compensation A: {end_compensation_A}")
+    print(f"End compensation B: {end_compensation_B}")
 
     for ind, (fr, x_off, y_off) in enumerate(zip(sequence, xsteps, ysteps)):
+        "2D roll with next frame compensation"
         if is_horiz:
             if x_off <= 0:
                 continue
@@ -156,8 +163,8 @@ def cycle_slide(sequence: list, angle: float):
             right = fr[:, :x_off]
 
             if y_off != 0:
-                left = np.roll(left, y_off - x_comp, axis=0)
-                right = np.roll(right, y_off - y_comp, axis=0)
+                left = np.roll(left, y_off - end_compensation_A, axis=0)
+                right = np.roll(right, y_off - end_compensation_B, axis=0)
 
             sequence[ind] = np.concatenate([left, right], axis=1)
 
@@ -168,9 +175,8 @@ def cycle_slide(sequence: list, angle: float):
             bottom = fr[:y_off, :]
 
             if x_off != 0:
-                # print(f"X != 0: {x_off}")
-                top = np.roll(top, x_off - y_comp, axis=1)
-                bottom = np.roll(bottom, x_off - x_comp, axis=1)
+                top = np.roll(top, x_off - end_compensation_B, axis=1)
+                bottom = np.roll(bottom, x_off - end_compensation_A, axis=1)
 
             sequence[ind] = np.concatenate([top, bottom], axis=0)
 
@@ -179,11 +185,11 @@ def cycle_slide(sequence: list, angle: float):
 
 
 @SequenceModifiers.adder(
-        'slide delay',
-        # (str, 'all', ['all', 'linear'], 1, 'Mode'),
-        # (int, 1, 99999, 1, 'N frames'),
-        (float, 0, 360, 1, 'Direction'),
-        (float, 0, 360, 1, 'Delay')
+    'slide delay',
+    # (str, 'all', ['all', 'linear'], 1, 'Mode'),
+    # (int, 1, 99999, 1, 'N frames'),
+    (float, 0, 360, 1, 'Direction'),
+    (float, 0, 360, 1, 'Delay')
 )
 def cycle_slide_delay(sequence: list, angle: float, delay: float):
     sequence = [fr.copy() for fr in sequence]
@@ -290,11 +296,11 @@ def cycle_slide_delay(sequence: list, angle: float, delay: float):
 
 
 @SequenceModifiers.adder(
-        'dynamic hue',
-        # (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, -180, 180, 1, "Starting hue"),
-        (float, -100, 100, 1, "N cycles"),
-        (float, 0, 1, 1, "Alpha"),
+    'dynamic hue',
+    # (int, 0, 255, 3, ["Red", "Green", "Blue"]),
+    (float, -180, 180, 1, "Starting hue"),
+    (float, -100, 100, 1, "N cycles"),
+    (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
 def dynamic_hue(sequence, hue_offset, n_cycles, alpha):
@@ -337,9 +343,9 @@ def dynamic_hue(sequence, hue_offset, n_cycles, alpha):
 
 
 @SequenceModifiers.adder(
-        'time clip',
-        (float, 0, 100, 1, "Start 100%"),
-        (float, 0, 100, 1, "End 100%")
+    'time clip',
+    (float, 0, 100, 1, "Start 100%"),
+    (float, 0, 100, 1, "End 100%")
 )
 @measure_real_time_decorator
 def clip_sequence(sequence, start: float, stop: float):
@@ -352,14 +358,14 @@ def clip_sequence(sequence, start: float, stop: float):
 
 
 @SequenceModifiers.adder(
-        "snap point to location",
-        (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
-        (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),
-        (float, 0, 100, 1, "Frame [%] position"),
-        (float, 0, 50, 1, "Template [%] size"),
-        (int, 0, 100, 1, "Smoothing distance"),
-        # (int, 0, 100, 1, "Keep value"),
-        (bool, 0, 1, 1, "Debug")
+    "snap point to location",
+    (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
+    (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),
+    (float, 0, 100, 1, "Frame [%] position"),
+    (float, 0, 50, 1, "Template [%] size"),
+    (int, 0, 100, 1, "Smoothing distance"),
+    # (int, 0, 100, 1, "Keep value"),
+    (bool, 0, 1, 1, "Debug")
 )
 @measure_real_time_decorator
 def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
@@ -376,12 +382,13 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
     window_fraction /= 200
 
     h, w, c = sequence[0].shape
-    point_end = (np.array([offset_end[0] / 200, offset_end[1] / 200], dtype=float) + 0.5)
+    point_end = (
+        np.array([offset_end[0] / 200, offset_end[1] / 200], dtype=float) + 0.5)
     point_end = (point_end * (w, h)).round().astype(int)
 
     posx, posy, template, window_size = track_template_in_sequence(
-            sequence, offset_start, start_fr, window_fraction,
-            smoothing_frames,
+        sequence, offset_start, start_fr, window_fraction,
+        smoothing_frames,
     )
 
     if debug:
@@ -432,7 +439,8 @@ def track_template_in_sequence(
 
 ):
     h, w, c = sequence[0].shape
-    point_start = (np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
+    point_start = (
+        np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
     point_start = (point_start * (w, h)).round().astype(int)
     inner_size = min([h, w])
     window_size = np.round(1 + 2 * (window_fraction * inner_size)).astype(int)
@@ -443,7 +451,7 @@ def track_template_in_sequence(
     frame = sequence[sample_ind]
 
     template = frame[point_start[1] - window_size // 2:point_start[1] + window_size // 2 + 1,
-               point_start[0] - window_size // 2:point_start[0] + window_size // 2 + 1]
+                     point_start[0] - window_size // 2:point_start[0] + window_size // 2 + 1]
     # plt.imshow(template)
     # plt.show()
     # output = []
@@ -472,9 +480,9 @@ def track_template_in_sequence(
 
 
 @SequenceModifiers.adder(
-        'monocolor',
-        (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, 0, 1, 1, "Alpha"),
+    'monocolor',
+    (int, 0, 255, 3, ["Red", "Green", "Blue"]),
+    (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
 def mono_color(sequence, color, alpha):
@@ -505,8 +513,8 @@ def mono_color(sequence, color, alpha):
 
 
 @SequenceModifiers.adder(
-        'overlap',
-        (int, 0, 50, 1, "Overlap [%]")
+    'overlap',
+    (int, 0, 50, 1, "Overlap [%]")
 )
 @sequence_adapter
 def overlap(sequence, overlap_fr):
@@ -532,7 +540,8 @@ def overlap(sequence, overlap_fr):
         # print(first.shape, second.shape)
         # print(1 - alpha)
 
-        new_fr = cv2.addWeighted(first, alpha, second, 1 - alpha, 0).round().astype(np.uint8)
+        new_fr = cv2.addWeighted(first, alpha, second,
+                                 1 - alpha, 0).round().astype(np.uint8)
         # new_fr =
         initial_seq.append(new_fr)
 

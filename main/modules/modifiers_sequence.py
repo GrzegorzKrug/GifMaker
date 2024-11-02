@@ -56,7 +56,7 @@ def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ra
     (int, 1, 99999, 1, 'N times'),
 )
 def repeat_sequence(im_ob, repeat):
-    frames = [fr for _ in range(repeat) for fr in im_ob]
+    frames = [fr for _ in range(repeat+1) for fr in im_ob]
 
     return frames
 
@@ -67,10 +67,13 @@ def repeat_sequence(im_ob, repeat):
 )
 def reverse(sequence, append=True):
     new_sequence = [fr.copy() for fr in sequence]
-    out = new_sequence.copy()
     if append:
-        for img in new_sequence[::-1]:
-            out.append(img.copy())
+        out = new_sequence.copy()
+    else:
+        out = []
+
+    for img in new_sequence[::-1]:
+        out.append(img.copy())
 
     return out
 

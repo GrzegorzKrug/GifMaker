@@ -126,7 +126,7 @@ def snap_to_tracked_region(output_frames, layer_dict,
 
 )
 def merge_to_output(output_frames, layer_dict, overlay_key):
-    return output_frames
+    return output_frames+layer_dict[overlay_key].output_frames
 
 
 @PipeLineModifiers.adder(

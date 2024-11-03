@@ -383,21 +383,26 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 def extend(sequence, increase):
     h, w, c = sequence[0].shape
 
-    boost_y, boost_x = np.abs(increase)
+    offset_y, offset_x = np.abs(increase)
+    offset_x = int(offset_x)
+    offset_y = int(offset_y)
 
     output = []
-    new_h = int(round(h * (1 + boost_y / 100)))
-    new_w = int(round(w * (1 + boost_x / 100)))
+    new_h = h + int(abs(offset_y))
+    new_w = w + int(abs(offset_x))
+
     blank = np.zeros((new_h, new_w, c), dtype=np.uint8)
 
-    h_ind = (new_h - h) // 2
-    w_ind = (new_w - w) // 2
+    # h_ind = (new_h - h) // 2
+    # w_ind = (new_w - w) // 2
+    h_off = 0 if offset_x > 0 else abs(offset_x)
+    w_off = 0 if abs(offset_y) < 0 else offset_y
 
     for fr in sequence:
         new_frame = blank.copy()
-        new_frame[h_ind:h_ind + h, w_ind:w_ind + w] = fr
-
+        new_frame[h_off:h_off + h, w_off:w_off + w] = fr
         output.append(new_frame)
+
     return output
 
 

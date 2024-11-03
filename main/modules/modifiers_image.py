@@ -31,18 +31,18 @@ SequenceModifiers = SequenceModSingleton()
 
 mirror = image_adapter(mirror)
 SequenceModifiers.adder(
-        "mirror",
-        (float, 0, 1, 1, 'pos'),
-        (int, 0, 1, 1, 'axis',),
-        (bool, 0, 1, 1, 'Flip'),
+    "mirror",
+    (float, 0, 1, 1, 'pos'),
+    (int, 0, 1, 1, 'axis',),
+    (bool, 0, 1, 1, 'Flip'),
 )(mirror)
 
 "=== NEW FUNCTIONS ==="
 
 
 @SequenceModifiers.adder(
-        'Alpha cutoff',
-        (float, 0, 255, 1, "Threshold")
+    'Alpha cutoff',
+    (float, 0, 255, 1, "Threshold")
 )
 @sequence_adapter
 def cutoff_alpha(sequence, threshold=50):
@@ -58,9 +58,9 @@ def cutoff_alpha(sequence, threshold=50):
 
 
 @SequenceModifiers.adder(
-        'color blend',
-        (int, 0, 255, 3, ["Red", "Green", "Blue"]),
-        (float, 0, 1, 1, "Alpha"),
+    'color blend',
+    (int, 0, 255, 3, ["Red", "Green", "Blue"]),
+    (float, 0, 1, 1, "Alpha"),
 )
 @sequence_adapter
 def color_blend(sequence, color, alpha):
@@ -84,18 +84,19 @@ def color_blend(sequence, color, alpha):
 
 
 @SequenceModifiers.adder(
-        'image crop',
-        (float, 0, 100, 1, "Left 100%"),
-        (float, 0, 100, 1, "Right 100%"),
-        (float, 0, 100, 1, "Top 100%"),
-        (float, 0, 100, 1, "Bottom 100%")
+    'image crop',
+    (float, 0, 100, 1, "Left 100%"),
+    (float, 0, 100, 1, "Right 100%"),
+    (float, 0, 100, 1, "Top 100%"),
+    (float, 0, 100, 1, "Bottom 100%")
 )
 @sequence_adapter
 @measure_real_time_decorator
 def crop_image(sequence, left: float, right: float, top: float, bottom: float):
     orig = sequence[0]
     h, w, c = orig.shape
-    top, down, left, right = np.array([top, bottom, left, right], dtype=float) / 100
+    top, down, left, right = np.array(
+        [top, bottom, left, right], dtype=float) / 100
     top = np.round(top * h).astype(int)
     down = np.round(down * h).astype(int)
     left = np.round(left * w).astype(int)
@@ -111,9 +112,9 @@ def crop_image(sequence, left: float, right: float, top: float, bottom: float):
 
 
 @SequenceModifiers.adder(
-        'resize',
-        (float, 0.01, 15, 1, 'Scale Width'),
-        (float, 0.01, 15, 1, 'Scale Height'),
+    'resize',
+    (float, 0.01, 15, 1, 'Scale Width'),
+    (float, 0.01, 15, 1, 'Scale Height'),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -146,9 +147,9 @@ def resize(sequence, scale_x=1.0, scale_y=1.0):
 
 
 @SequenceModifiers.adder(
-        'resize ratio',
-        (str, 'outer', ['inner', 'outer'], 1, 'Type'),
-        (int, 50, 10000, 1, "New Dimension"),
+    'resize ratio',
+    (str, 'outer', ['inner', 'outer'], 1, 'Type'),
+    (int, 50, 10000, 1, "New Dimension"),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -173,10 +174,10 @@ def resize_ratio(sequence, res_typ='outer', new_dim=150):
 
 
 @SequenceModifiers.adder(
-        "rectangle",
-        (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
-        (float, 0, 50, 1, "Template size"),
-        (int, 0, 255, 3, ["Red", "Green", "Blue"])
+    "rectangle",
+    (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
+    (float, 0, 50, 1, "Template size"),
+    (int, 0, 255, 3, ["Red", "Green", "Blue"])
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -188,7 +189,8 @@ def draw_rectangle(sequence, offset_start=None, window_fraction=0.1, color=None,
 
     h, w, c = sequence[0].shape
 
-    point_start = (np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
+    point_start = (
+        np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
     point_start = (point_start * (w, h)).round().astype(int)
     inner_size = min([h, w])
     window_size = np.round(1 + 2 * (window_fraction * inner_size)).astype(int)
@@ -198,7 +200,7 @@ def draw_rectangle(sequence, offset_start=None, window_fraction=0.1, color=None,
     for fr in sequence:
         fr = fr.copy()
         fr[point_start[1] - window_size:point_start[1] + window_size + 1,
-        point_start[0] - window_size:point_start[0] + window_size + 1, :3] = color
+           point_start[0] - window_size:point_start[0] + window_size + 1, :3] = color
         output.append(fr)
     return output
 
@@ -221,10 +223,12 @@ def get_move_clip_indexes(cur_offset, size):
 
 def convolve_pic(sequence, keep_margin, kernel, allowed_channels):
     mask_of_original_pixels = np.ones_like(sequence[0], dtype=bool)
-    mask_of_original_pixels[keep_margin:-keep_margin, keep_margin:-keep_margin] = False
+    mask_of_original_pixels[keep_margin:-
+                            keep_margin, keep_margin:-keep_margin] = False
 
     picture_channels = sequence[0].shape[2]
-    allowed_channels = [ch for ch in allowed_channels if ch <= picture_channels]
+    allowed_channels = [
+        ch for ch in allowed_channels if ch <= picture_channels]
     if not allowed_channels:
         return sequence
 
@@ -252,9 +256,9 @@ def gauss_kernel(kernlen=21, nsig=3):
 
 
 @SequenceModifiers.adder(
-        "Mean filter",
-        (int, 1, 100, 1, "Kernel radius"),
-        (int, -1, 3, 1, "Channel"),
+    "Mean filter",
+    (int, 1, 100, 1, "Kernel radius"),
+    (int, -1, 3, 1, "Channel"),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -277,9 +281,9 @@ def mean_filter(sequence, radius=1, channel_ind=0):
 
 
 @SequenceModifiers.adder(
-        "Median filter",
-        (int, 1, 100, 1, "Kernel radius"),
-        (int, -1, 0, 1, "Channel")
+    "Median filter",
+    (int, 1, 100, 1, "Kernel radius"),
+    (int, -1, 0, 1, "Channel")
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -302,10 +306,10 @@ def median_filter(sequence, dist=1, channel=0):
 
 
 @SequenceModifiers.adder(
-        'mask color',
-        (int, 0, 255, 3, ['Red', 'Green', 'Blue']),
-        (float, 1, 30000, 1, 'Distance threshold'),
-        (float, 0.5, 10, 1, 'Distance exponent')
+    'mask color',
+    (int, 0, 255, 3, ['Red', 'Green', 'Blue']),
+    (float, 1, 30000, 1, 'Distance threshold'),
+    (float, 0.5, 10, 1, 'Distance exponent')
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -336,11 +340,11 @@ def mask_color(sequence, color, max_dist=5, exponent=1):
 
 
 @SequenceModifiers.adder(
-        'Erode/Dilate',
-        (bool, 0, 1, 1, "Dilate"),
-        (int, 1, 15, 1, "How many times?"),
-        (int, 1, 7, 1, "Kernel Radius"),
-        (int, 0, 3, 1, "Channel"),
+    'Erode/Dilate',
+    (bool, 0, 1, 1, "Dilate"),
+    (int, 1, 15, 1, "How many times?"),
+    (int, 1, 7, 1, "Kernel Radius"),
+    (int, 0, 3, 1, "Channel"),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -375,8 +379,8 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 
 
 @SequenceModifiers.adder(
-        'extend',
-        (int, -500, 500, 2, ['Vertical pixel', 'Horizontal pixel']),
+    'extend',
+    (int, -500, 500, 2, ['Vertical pixel', 'Horizontal pixel']),
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -448,12 +452,12 @@ def stack_channels_as_rgb(channels_list, labels, size=1.2):
         rgb = rgb.astype(np.uint8)
 
         rgb = cv2.putText(
-                rgb, lb, (5, 60),
-                fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 50, 0), thickness=8,
+            rgb, lb, (5, 60),
+            fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 50, 0), thickness=8,
         )
         rgb = cv2.putText(
-                rgb, lb, (5, 60),
-                fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 255, 0), thickness=3,
+            rgb, lb, (5, 60),
+            fontScale=size, fontFace=cv2.FONT_HERSHEY_SIMPLEX, color=(50, 255, 0), thickness=3,
         )
         rgb_list.append(rgb)
 
@@ -462,8 +466,8 @@ def stack_channels_as_rgb(channels_list, labels, size=1.2):
 
 
 @SequenceModifiers.adder(
-        'squerify',
-        (int, -100, 100, 1, "Center offset [%]")
+    'squerify',
+    (int, -100, 100, 1, "Center offset [%]")
 )
 @image_adapter
 def squerify_interace(image, val):
@@ -484,7 +488,6 @@ if __name__ == "__main__":
     out = blend_region(blank, aurora)
     cv2.imshow("Blend", out)
     cv2.waitKey()
-
 
     # cv2.imwrite(f"..{os.path.sep}test.png", aurora)
 

@@ -1,3 +1,9 @@
+from yasiu_native.time import measure_real_time_decorator
+from modules.image_helpers import max_image_size
+from modules import modifiers_pipeline
+from modules import modifiers_image
+from modules import modifiers_sequence
+from modules.image_layer import Layer
 import tkinter as tk
 import tkinter.ttk
 
@@ -32,19 +38,13 @@ PipeLineModifiers = PiplineModifiersSingleton()
 # print("Grabbed.")
 
 # print("\nImport from: layer")
-from modules.image_layer import Layer
 
 # print("\nImport from: sequence")
-from modules import modifiers_sequence
 
 # print("\nImport from: image")
-from modules import modifiers_image
 
 # print("Importing pipeline:")
-from modules import modifiers_pipeline
 # print("Imported pipeline")
-
-from modules.image_helpers import max_image_size
 
 
 # PipeLineModifers = SequenceModSingleton()
@@ -54,8 +54,6 @@ print("Imported everything.\n" * 5)
 print(SequenceModifiers)
 print(PipeLineModifiers)
 print(_instances.keys())
-
-from yasiu_native.time import measure_real_time_decorator
 
 
 GifImagePlugin.LOADING_STRATEGY = GifImagePlugin.LOADING_STRATEGY.RGB_ALWAYS
@@ -172,8 +170,8 @@ class GifClipApp(GuiBuilder):
     @property
     def app_params(self):
         return (
-                self.update_interval,
-                # self.filters, self.projects,
+            self.update_interval,
+            # self.filters, self.projects,
         )
 
     @app_params.setter
@@ -181,8 +179,8 @@ class GifClipApp(GuiBuilder):
         N = len(self.app_params)
         if N == len(new_params):
             (
-                    self.update_interval,
-                    # self.filters, self.projects,
+                self.update_interval,
+                # self.filters, self.projects,
             ) = new_params
         else:
             print("Could not load App params, does not match!")
@@ -199,14 +197,17 @@ class GifClipApp(GuiBuilder):
     def cur_project(self, new_val):
         if not isinstance(new_val, list):
             showerror(f"Loaded projects are not list type!")
-            ret = self.ask_user_for_confirm("Loading error", "Reset to default?")
+            ret = self.ask_user_for_confirm(
+                "Loading error", "Reset to default?")
             if ret:
                 return None
             else:
-                raise TypeError(f"Loaded projects are not list type! {type(new_val)}")
+                raise TypeError(
+                    f"Loaded projects are not list type! {type(new_val)}")
 
         if len(self.cur_project) != len(new_val):
-            ret = self.ask_user_for_confirm("Project data invalid", "Reset to default?")
+            ret = self.ask_user_for_confirm(
+                "Project data invalid", "Reset to default?")
             if ret:
                 return None
             else:
@@ -214,9 +215,9 @@ class GifClipApp(GuiBuilder):
 
         else:
             (
-                    layers_dict,
-                    self.pipeline_mods_list,
-                    self._next_layer_key
+                layers_dict,
+                self.pipeline_mods_list,
+                self._next_layer_key
             ) = new_val
 
             self._next_layer_key = int(self._next_layer_key)
@@ -313,10 +314,13 @@ class GifClipApp(GuiBuilder):
         if len(self.display_config) < 1:
             return
 
-        self._read_config_show_pic(self.display_config[0], self.preview_frames_list[0])
-        self._read_config_show_pic(self.display_config[1], self.preview_frames_list[1])
+        self._read_config_show_pic(
+            self.display_config[0], self.preview_frames_list[0])
+        self._read_config_show_pic(
+            self.display_config[1], self.preview_frames_list[1])
 
-        self.playback_position = (self.playback_position + 1)  # % self.cycle_steps
+        self.playback_position = (
+            self.playback_position + 1)  # % self.cycle_steps
 
     def _read_config_show_pic(self, config, img_frame):
         var, spin = config
@@ -364,7 +368,8 @@ class GifClipApp(GuiBuilder):
                 frames = lay.output_frames
 
             stacked = (frames[0] / 2 + frames[-1] / 2).round().astype(np.uint8)
-            two_frames = np.concatenate([frames[0], frames[-1], stacked], axis=1)
+            two_frames = np.concatenate(
+                [frames[0], frames[-1], stacked], axis=1)
             # print(two_frames.shape, frames[0].shape)
 
             out_pic = max_image_size(two_frames, max_width=900, max_height=460)
@@ -596,7 +601,8 @@ class GifClipApp(GuiBuilder):
                 else:
                     collector_instance = SequenceModifiers
 
-                self._modifier_config(params_list, mod_name, collector_instance, title)
+                self._modifier_config(
+                    params_list, mod_name, collector_instance, title)
 
             def remove_all():
                 all_mods_union.clear()
@@ -605,11 +611,14 @@ class GifClipApp(GuiBuilder):
             group = Frame(tab1)
             group.pack(side='top')
 
-            bt = tk.Button(group, text="Add first", command=lambda: add_and_config(is_first=True))
+            bt = tk.Button(group, text="Add first",
+                           command=lambda: add_and_config(is_first=True))
             bt.pack(side='left')
-            bt = tk.Button(group, text="Add last", command=lambda: add_and_config())
+            bt = tk.Button(group, text="Add last",
+                           command=lambda: add_and_config())
             bt.pack(side='left')
-            bt = tk.Button(group, text="Clear modifiers in this step", command=remove_all)
+            bt = tk.Button(
+                group, text="Clear modifiers in this step", command=remove_all)
             bt.pack(side='left')
 
         if allow_pipe_mods:
@@ -623,9 +632,11 @@ class GifClipApp(GuiBuilder):
             self._modifier_select(self.pipeline_mods_list, "pipeline")
         else:
             if layer_key not in self.layers_dict:
-                showwarning("Wrong key", f"Wrong layer key to edit: {layer_key}")
+                showwarning(
+                    "Wrong key", f"Wrong layer key to edit: {layer_key}")
                 return None
-            self._modifier_select(self.layers_dict[layer_key].filters_list, "layer")
+            self._modifier_select(
+                self.layers_dict[layer_key].filters_list, "layer")
 
     def _modifier_select(self, all_mods_union: Union[list, dict], title=""):
         if len(all_mods_union) <= 0:
@@ -688,9 +699,11 @@ class GifClipApp(GuiBuilder):
             lb.select_set(dest_ind)
             self.run_single_update = True
 
-        but_up = Button(button_group, text="Move up", command=lambda: change_order())
+        but_up = Button(button_group, text="Move up",
+                        command=lambda: change_order())
         but_up.pack(side='top')
-        but_low = Button(button_group, text="Move down", command=lambda: change_order(False))
+        but_low = Button(button_group, text="Move down",
+                         command=lambda: change_order(False))
         but_low.pack(side='bottom')
 
         for i, k in enumerate(fl_names):
@@ -729,7 +742,8 @@ class GifClipApp(GuiBuilder):
                     collector_instance = PipeLineModifiers
                 else:
                     collector_instance = SequenceModifiers
-                self._modifier_config(storage_list, name, collector_instance, title)
+                self._modifier_config(storage_list, name,
+                                      collector_instance, title)
 
         last = Frame(wn)
         last.pack()
@@ -799,12 +813,15 @@ class GifClipApp(GuiBuilder):
                 if ar_type is float:
                     ent = tk.Entry(group, textvariable=var_instance)
                     ent.pack(side='bottom')
-                    variables_to_check.append((float, ent, cur_inner_val, mmin, mmax))
+                    variables_to_check.append(
+                        (float, ent, cur_inner_val, mmin, mmax))
 
                 elif ar_type is int:
-                    spin = tk.Spinbox(group, from_=mmin, to=mmax, textvariable=var_instance)
+                    spin = tk.Spinbox(group, from_=mmin,
+                                      to=mmax, textvariable=var_instance)
                     spin.pack(side='bottom')
-                    variables_to_check.append((int, spin, cur_inner_val, mmin, mmax))
+                    variables_to_check.append(
+                        (int, spin, cur_inner_val, mmin, mmax))
 
                 elif ar_type is str:
                     enum_box = tk.Listbox(group)
@@ -823,7 +840,8 @@ class GifClipApp(GuiBuilder):
 
                     # variables_to_check.append((float, ent, cur_inner_val, mmin, mmax))
                 elif ar_type is bool:
-                    bt = tk.Checkbutton(wn, text=cur_inner_label, variable=var_instance)
+                    bt = tk.Checkbutton(
+                        wn, text=cur_inner_label, variable=var_instance)
                     bt.pack()
 
                 if ar_type is not bool:
@@ -878,11 +896,12 @@ class GifClipApp(GuiBuilder):
                 elif ar_type is float:
                     conv_fun = float
                 elif ar_type is str:
-                    conv_fun = lambda x: x
+                    def conv_fun(x): return x
                 elif ar_type is bool:
                     conv_fun = bool
                 else:
-                    raise TypeError(f"Types is unsupported now (797): {ar_type}")
+                    raise TypeError(
+                        f"Types is unsupported now (797): {ar_type}")
 
                 if nvars == 1:
                     val = variable[0].get()
@@ -968,22 +987,23 @@ class GifClipApp(GuiBuilder):
         #         # sp.state
 
         for num, text in enumerate(
-                ["Output", "Pipeline step", 'Layer input', 'Layer output', 'First/Last frame'],
+                ["Output", "Pipeline step", 'Layer input',
+                    'Layer output', 'First/Last frame'],
                 1
         ):
             rad1 = tk.Radiobutton(
-                    fr, variable=var, text=text, value=num,
-                    # validatecommand=validate_spin,
-                    # command=toggle_spin,
+                fr, variable=var, text=text, value=num,
+                # validatecommand=validate_spin,
+                # command=toggle_spin,
             )
             rad1.config()
             rad1.pack(side='top', anchor='c')
 
         sp = tk.Spinbox(
-                fr, from_=0, to=100,
-                # validate='all',
-                # validatecommand=validate_spin,
-                # invalidcommand=invalid_cmd,
+            fr, from_=0, to=100,
+            # validate='all',
+            # validatecommand=validate_spin,
+            # invalidcommand=invalid_cmd,
         )
         sp.pack()
         # sp.config(state="readonly")
@@ -1006,14 +1026,14 @@ class GifClipApp(GuiBuilder):
                 return key
 
         bt_add = Button(
-                group_but, text="Add",
-                command=lambda: self.modifier_add_menu(check_preview_mode())
+            group_but, text="Add",
+            command=lambda: self.modifier_add_menu(check_preview_mode())
         )
         bt_add.pack(side='left')
 
         bt_edit = Button(
-                group_but, text="Edit",
-                command=lambda: self.modifier_select_menu(check_preview_mode())
+            group_but, text="Edit",
+            command=lambda: self.modifier_select_menu(check_preview_mode())
         )
         bt_edit.pack()
 
@@ -1029,14 +1049,15 @@ class GifClipApp(GuiBuilder):
         elif up_type == "ready":
             self.status_label.config(text="Ready", bg="#AFA", fg="#000")
             self.status_label_time.config(
-                    text=f"Last process time: {format_time(self.last_process_time)}")
+                text=f"Last process time: {format_time(self.last_process_time)}")
 
         elif up_type == "exporting":
             print("status export:")
             self.status_label.config(text="Exporting...", bg="#36C", fg="#DDD")
 
         elif up_type == "loading":
-            self.status_label.config(text="Some layers are loading...", bg="#36C", fg="#DDD")
+            self.status_label.config(
+                text="Some layers are loading...", bg="#36C", fg="#DDD")
             # print("status export:")
 
         else:
@@ -1046,8 +1067,8 @@ class GifClipApp(GuiBuilder):
     def export_as(self):
         # print(f"Export path: folder: {self.last_folder_used}")
         new_path = tk.filedialog.asksaveasfilename(
-                filetypes=self.GIF_TYPES,
-                initialdir=self.last_folder_used,
+            filetypes=self.GIF_TYPES,
+            initialdir=self.last_folder_used,
         )
         if not (new_path.endswith("gif") or new_path.endswith("GIF")):
             new_path += ".gif"
@@ -1067,14 +1088,15 @@ class GifClipApp(GuiBuilder):
         settings_grid = tk.Frame(top)
         settings_grid.pack(side='top')
         array = (
-                [
-                        (tk.Label, dict(text="Duration [ms]")),
-                        (tk.Spinbox, dict(from_=10, to=150, textvariable=duration_var, increment=5)),
-                ],
-                [
-                        (tk.Label, dict(text="Transparent")),
-                        (tk.Checkbutton, dict(variable=rgba_mode_var)),
-                ],
+            [
+                (tk.Label, dict(text="Duration [ms]")),
+                (tk.Spinbox, dict(from_=10, to=150,
+                                  textvariable=duration_var, increment=5)),
+            ],
+            [
+                (tk.Label, dict(text="Transparent")),
+                (tk.Checkbutton, dict(variable=rgba_mode_var)),
+            ],
         )
         self.make_grid(array, parent=settings_grid)
 
@@ -1094,7 +1116,8 @@ class GifClipApp(GuiBuilder):
 
     def export(self):
         if self.running_update or self.run_single_update:
-            showerror("Update is running", "Export or filters are running. Wait for end.")
+            showerror("Update is running",
+                      "Export or filters are running. Wait for end.")
             return
 
         if self.last_export_path:
@@ -1129,11 +1152,11 @@ class GifClipApp(GuiBuilder):
             pil_frames = [Image.fromarray(fr).convert("RGB") for fr in frames]
 
         pil_frames[0].save(
-                path, save_all=True, append_images=pil_frames[1:],
-                optimize=False, loop=0,
-                # background=(0, 0, 0, 255),
-                quality=100, duration=duration,
-                disposal=2,
+            path, save_all=True, append_images=pil_frames[1:],
+            optimize=False, loop=0,
+            # background=(0, 0, 0, 255),
+            quality=100, duration=duration,
+            disposal=2,
         )
         print(f"Saved gif to: {path}. Frames: {len(pil_frames)}")
         tend = time.time() - t0
@@ -1151,35 +1174,35 @@ def build_GifGui():
     # gui = GifClipApp(allow_load=False)
 
     gui.add_menu([
-            ("New project", lambda: gui.load_any_sequence(new_pr=True)),
-            ("Load project", gui.load_project),
-            ("Save project", gui.save_project),
-            ("Save project as", gui.save_project_as),
+        ("New project", lambda: gui.load_any_sequence(new_pr=True)),
+        ("Load project", gui.load_project),
+        ("Save project", gui.save_project),
+        ("Save project as", gui.save_project_as),
     ], name="Project")
     gui.add_menu([
-            ("Export Gif", gui.export),
-            ("Export Gif as", gui.export_as),
+        ("Export Gif", gui.export),
+        ("Export Gif as", gui.export_as),
     ], name="Export")
 
     gui.add_menu([
-            ("New layer", gui.load_any_sequence),
-            ("Change pic in layer", gui.change_picture),
-            # ("Layers", None),
+        ("New layer", gui.load_any_sequence),
+        ("Change pic in layer", gui.change_picture),
+        # ("Layers", None),
     ], name="Layer")
 
     gui.add_menu([
-            ("Force new render", gui.clear_error),
+        ("Force new render", gui.clear_error),
     ], name="Error")
 
     gui.add_menu([
-            # ("Add sequence mod", gui.modifier_add_menu),
-            # ("Edit sequence mods", lambda: gui.modifier_select("sequence")),
-            # "separator",
-            # ("Add layer filter", lambda: gui.modifier_add_menu("0")),
-            # ("Edit layer filter", lambda: gui.modifier_select("filter")),
-            "separator",
-            # ("Remove layer mods", gui.clear_layer_mods),
-            ("Remove pipeline mods", gui.clear_pipe_mods),
+        # ("Add sequence mod", gui.modifier_add_menu),
+        # ("Edit sequence mods", lambda: gui.modifier_select("sequence")),
+        # "separator",
+        # ("Add layer filter", lambda: gui.modifier_add_menu("0")),
+        # ("Edit layer filter", lambda: gui.modifier_select("filter")),
+        "separator",
+        # ("Remove layer mods", gui.clear_layer_mods),
+        ("Remove pipeline mods", gui.clear_pipe_mods),
     ], name="Filters")
     #
     # gui.add_menu([
@@ -1189,50 +1212,51 @@ def build_GifGui():
     # ], name="Sequence")
 
     gui.add_menu([
-            # ("Set Output size", None),
-            ("Change Refresh rate", gui.change_refresh),
-            # ("Toggle zoom", gui.toggle_zoom),
+        # ("Set Output size", None),
+        ("Change Refresh rate", gui.change_refresh),
+        # ("Toggle zoom", gui.toggle_zoom),
     ], name="Settings")
 
     main_frame = gui.add_frame(packing=dict(fill='both', expand=True))
 
     main_frame.configure(bg='#200')
 
-    fr = gui.add_frame(packing=dict(side='bottom', fill='x'), params=dict(pady=2))
+    fr = gui.add_frame(packing=dict(
+        side='bottom', fill='x'), params=dict(pady=2))
     array = [
             [
-                    # (Button, kwargify(text='Export', command=gui.export_gif)),
-                    (Label, dict(text="Label", bg="#222")),
-                    (Label, dict(text="ProcessTime", bg="#252", fg="#EFD")),
-                    (Button, dict(text="Quit", command=gui.quit, bg="#933", fg='#FFF')),
+                # (Button, kwargify(text='Export', command=gui.export_gif)),
+                (Label, dict(text="Label", bg="#222")),
+                (Label, dict(text="ProcessTime", bg="#252", fg="#EFD")),
+                (Button, dict(text="Quit", command=gui.quit, bg="#933", fg='#FFF')),
             ]
     ]
 
     _, refs = gui.make_grid(
-            array, parent=fr,
-            packing=dict(sticky='ew', padx=5, pady=3)
+        array, parent=fr,
+        packing=dict(sticky='ew', padx=5, pady=3)
     )
     gui.status_label = refs[0][0]
     gui.status_label_time = refs[0][1]
 
     screen_frame = gui.add_label_frame(
-            params=dict(height=20), parent=main_frame,
-            packing=dict(expand=True, fill='both'),
+        params=dict(height=20), parent=main_frame,
+        packing=dict(expand=True, fill='both'),
     )
     screen_frame.configure(bg="#66B")
 
     frames, refs = gui.make_grid(
+        [
             [
-                    [
-                            (gui.make_preview_switch, dict(label='Edit Top')),
-                            (gui.create_preview_box, dict(text='Edit View')),
-                    ],
-                    [
-                            (gui.make_preview_switch, dict(label='Edit Lower')),
-                            (gui.create_preview_box, dict(text='Preview'))
-                    ]
+                (gui.make_preview_switch, dict(label='Edit Top')),
+                (gui.create_preview_box, dict(text='Edit View')),
             ],
-            parent=screen_frame, packing=dict(sticky='news', ),
+            [
+                (gui.make_preview_switch, dict(label='Edit Lower')),
+                (gui.create_preview_box, dict(text='Preview'))
+            ]
+        ],
+        parent=screen_frame, packing=dict(sticky='news', ),
     )
     screen_frame.columnconfigure(2, weight=5)
 

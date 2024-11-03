@@ -146,7 +146,8 @@ class Layer:
             fun = SequenceModifiers[fil_name]
             if fun is None:
                 # self.handle_missing_mod()
-                showwarning("Warning!", f"Not found filter function: {fil_name}")
+                showwarning(
+                    "Warning!", f"Not found filter function: {fil_name}")
                 print(f"Not found pre filter function: {fil_name}")
                 continue
 
@@ -165,7 +166,8 @@ class Layer:
 
         for fr in output_frames:
             if shape != fr.shape:
-                print(f"Incorrect shape: {fr.shape} != {shape}. Filters: {self.filters_list}")
+                print(
+                    f"Incorrect shape: {fr.shape} != {shape}. Filters: {self.filters_list}")
                 showwarning("Error", "Sequence changes image dimension!")
                 # return sequence
         self.output_frames = output_frames

@@ -12,10 +12,10 @@ PipeLineModifiers = PiplineModifiersSingleton()
 
 
 @PipeLineModifiers.adder(
-        "merge to new",
-        (int, 0, 100, 1, "Output layer key"),
-        (int, 0, 100, 1, "Base layer key"),
-        (int, 0, 100, 1, "Overlay layer key"),
+    "merge to new",
+    (int, 0, 100, 1, "Output layer key"),
+    (int, 0, 100, 1, "Base layer key"),
+    (int, 0, 100, 1, "Overlay layer key"),
 
 )
 # @sequence_adapter
@@ -32,19 +32,19 @@ def merge_to_new(output_frames, layer_dict, dst_layer_key, base_key, overlay_key
 
 
 @PipeLineModifiers.adder(
-        "Snap pic to Tracked region",
-        (int, 0, 100, 1, "Base layer key"),
-        (int, 0, 100, 1, "Overlay layer key"),
-        (int, 0, 100, 1, "Output layer key"),
-        (float, -100, 100, 2, ["Sample X offset", "Sample Y offset"]),
-        (float, -100, 100, 2, ["Target X offset", "Target Y offset"]),
+    "Snap pic to Tracked region",
+    (int, 0, 100, 1, "Base layer key"),
+    (int, 0, 100, 1, "Overlay layer key"),
+    (int, 0, 100, 1, "Output layer key"),
+    (float, -100, 100, 2, ["Sample X offset", "Sample Y offset"]),
+    (float, -100, 100, 2, ["Target X offset", "Target Y offset"]),
 
-        (float, 0, 100, 1, "Frame position"),
-        (float, 0, 50, 1, "Template size"),
-        (int, 0, 100, 1, "Smoothing distance"),
-        (float, 0, 100, 1, "Smoothing kernel exponent"),
-        (float, 0, 100, 1, "Overlay scale"),
-        (bool, 0, 1, 1, "Debug")
+    (float, 0, 100, 1, "Frame position"),
+    (float, 0, 50, 1, "Template size"),
+    (int, 0, 100, 1, "Smoothing distance"),
+    (float, 0, 100, 1, "Smoothing kernel exponent"),
+    (float, 0, 100, 1, "Overlay scale"),
+    (bool, 0, 1, 1, "Debug")
 )
 def snap_to_tracked_region(output_frames, layer_dict,
                            base_layer_key, overlay_key, dst_layer_key,
@@ -71,8 +71,8 @@ def snap_to_tracked_region(output_frames, layer_dict,
     offset_end = (np.array(offset_end) / 200 * (w, h)).round().astype(int)
 
     posx, posy, template, window_pixel_size = track_template_in_sequence(
-            base.output_frames, offset_start, start_fr, window_fraction,
-            smoothing_frames, smoothing_val
+        base.output_frames, offset_start, start_fr, window_fraction,
+        smoothing_frames, smoothing_val
     )
     # snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
 
@@ -85,7 +85,8 @@ def snap_to_tracked_region(output_frames, layer_dict,
     if len(overlay.output_frames) == 1:
         overlay_frames = [over_frame] * len(seq)
     else:
-        overlay_frames = sequence_sampler(overlay.output_frames, mode='linear', frames_n=len(seq))
+        overlay_frames = sequence_sampler(
+            overlay.output_frames, mode='linear', frames_n=len(seq))
 
     if debug:
         height, width, *_ = template.shape
@@ -99,7 +100,8 @@ def snap_to_tracked_region(output_frames, layer_dict,
             # x1, x2, dx1, dx2 = get_overlay_indexes(base_w, x, width - 2)
             # y1, y2, dy1, dy2 = get_overlay_indexes(base_h, y, height 2)
             # print(template.shape, template[1:-1,1:-1].shape)
-            merged[dy1 + 1:dy2 - 1, dx1 + 1:dx2 - 1] = template[y1 + 1:y2 - 1, x1 + 1:x2 - 1]
+            merged[dy1 + 1:dy2 - 1, dx1 + 1:dx2 -
+                   1] = template[y1 + 1:y2 - 1, x1 + 1:x2 - 1]
             seq[ind] = merged
     else:
         for ind, (pic, x, y, over_frame) in enumerate(zip(seq, posx, posy, overlay_frames)):
@@ -121,8 +123,8 @@ def snap_to_tracked_region(output_frames, layer_dict,
 
 
 @PipeLineModifiers.adder(
-        "merge to output",
-        (int, 0, 100, 1, "Overlay layer key"),
+    "merge to output",
+    (int, 0, 100, 1, "Overlay layer key"),
 
 )
 def merge_to_output(output_frames, layer_dict, overlay_key):
@@ -130,8 +132,8 @@ def merge_to_output(output_frames, layer_dict, overlay_key):
 
 
 @PipeLineModifiers.adder(
-        "replace output",
-        (int, 0, 100, 1, "New layer key"),
+    "replace output",
+    (int, 0, 100, 1, "New layer key"),
 
 )
 def replace_output(output_frames, layer_dict, overlay_key):

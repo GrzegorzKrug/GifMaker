@@ -10,6 +10,8 @@ from modules.collectors import SequenceModifiers
 from modules.image_readers import read_gif, read_webp
 from yasiu_native.time import measure_real_time_decorator
 
+import multiprocessing as mpc
+
 
 # SequenceModifiers = SequenceModSingleton()
 
@@ -126,6 +128,9 @@ class Layer:
             self.clear_layer()
 
     def apply_mods(self):
+        return self._apply_mods_procc()
+
+    def _apply_mods_procc(self):
         if not self.filters_list:
             self.output_frames = self.orig_frames
             return None
@@ -135,6 +140,7 @@ class Layer:
         # print(len(self.orig_frames))
         output_frames = np.stack(self.orig_frames, dtype=np.uint8)
         # print(f"Allocated: {output_frames.shape}")
+        print(f"Self filters of layer: {self.filters_list}")
 
         for _, fil_name, arg in self.filters_list.copy():
             fun = SequenceModifiers[fil_name]

@@ -18,7 +18,7 @@ from tkinter.messagebox import showwarning, showerror
 from modules.gui_builder import GuiBuilder
 from tkinter import Frame
 
-# from functools import wraps
+from functools import wraps
 from typing import Union
 import time
 
@@ -96,6 +96,36 @@ def format_time(dur, fmt=">4.1f"):
 #     return wrapper
 
 
+def windowHashingDecorator(func):
+    """
+    Hash window and reoopen
+    """
+    @wraps(func)
+    def wrapper(self,  layer_key=None, modifierName: str = None):
+        if layer_key is None:
+            newWindow = func(self)
+            cur_hash = self.hashAppWindows("pipe")
+
+        elif modifierName is None:
+            newWindow = func(self, layer_key=layer_key)
+            cur_hash = self.hashAppWindows(layer_key)
+
+        else:
+            newWindow = func(self, layer_key=layer_key,
+                             modifierName=modifierName)
+            cur_hash = self.hashAppWindows(layer_key, modifierName)
+
+        if cur_hash in self.openWindowsDict:
+            curWind = self.openWindowsDict[cur_hash]
+            curWind: tk.Toplevel
+            if curWind is not None:
+                curWind.destroy()
+            self.openWindowsDict.pop(cur_hash)
+
+        self.openWindowsDict[cur_hash] = newWindow
+    return wrapper
+
+
 class GifClipApp(GuiBuilder):
     picture_display_size = 300
     # output_size = 600
@@ -138,6 +168,9 @@ class GifClipApp(GuiBuilder):
         self.last_thread = None
         self.last_folder_used = None
         self.apply_thread = None
+
+        "WindowManager"
+        self.openWindowsDict = dict()
 
         if allow_load:
             self.load_settings()
@@ -398,6 +431,17 @@ class GifClipApp(GuiBuilder):
         pass
 
     @staticmethod
+    def handle_missing_mod():
+        pass
+
+    @staticmethod
+    def hashAppWindows(layerNum: int, filterName: str = None):
+        outHashStr = str(layerNum)
+        if str is not None:
+            outHashStr += "-" + str(filterName)
+        return outHashStr
+
+    @staticmethod
     def handle_error_mod():
         pass
 
@@ -537,16 +581,23 @@ class GifClipApp(GuiBuilder):
         self.last_project_path = path
         self.save_project()
 
+    @windowHashingDecorator
     def modifier_add_menu(self, layer_key=None):
+        """Create windows to spawn modifires"""
+
         if layer_key is not None:
             lay = self.layers_dict[layer_key]
             modifiers_list = lay.filters_list
             allow_pipe = False
+            title = f"Layer {layer_key}"
         else:
             modifiers_list = self.pipeline_mods_list
             allow_pipe = True
+            title = "Pipeline"
 
-        self._modifier_add(modifiers_list, allow_pipe_mods=allow_pipe)
+        window = self._modifier_add(
+            modifiers_list, allow_pipe_mods=allow_pipe, title=title)
+        return window
 
     def _modifier_add(self,
                       all_mods_union: Union[list, dict],
@@ -554,7 +605,7 @@ class GifClipApp(GuiBuilder):
                       title=""):
         top = tk.Toplevel()
         top.geometry(f"400x600")
-        top.title(f"Adding {title}")
+        top.title(f"Adding to: {title}")
 
         tab_control = tk.ttk.Notebook(top)
         tab_control.pack()
@@ -602,7 +653,8 @@ class GifClipApp(GuiBuilder):
                     collector_instance = SequenceModifiers
 
                 self._modifier_config(
-                    params_list, mod_name, collector_instance, title)
+                    params_list, mod_name,
+                    collector_instance, title)
 
             def remove_all():
                 all_mods_union.clear()
@@ -627,16 +679,18 @@ class GifClipApp(GuiBuilder):
         else:
             add_tab(SequenceModifiers, "Filters")
 
+        return top
+
+    @windowHashingDecorator
     def modifier_select_menu(self, layer_key=None):
         if layer_key is None:
-            self._modifier_select(self.pipeline_mods_list, "pipeline")
+            return self._modifier_select(self.pipeline_mods_list, "Pipeline")
         else:
             if layer_key not in self.layers_dict:
                 showwarning(
                     "Wrong key", f"Wrong layer key to edit: {layer_key}")
                 return None
-            self._modifier_select(
-                self.layers_dict[layer_key].filters_list, "layer")
+            return self._modifier_select(self.layers_dict[layer_key].filters_list, f"Layer {layer_key}")
 
     def _modifier_select(self, all_mods_union: Union[list, dict], title=""):
         if len(all_mods_union) <= 0:
@@ -649,16 +703,16 @@ class GifClipApp(GuiBuilder):
         # else:
         #     was_dict = False
 
-        wn = tk.Toplevel()
-        wn.geometry(f"400x600")
-        wn.title(f"Edit: {title}")
+        window = tk.Toplevel()
+        window.geometry(f"400x600")
+        window.title(f"Editing: {title}")
 
         if isinstance(all_mods_union, dict):
             fl_names = [fl[1] for fl in all_mods_union.items()]
         else:
             fl_names = [fl[1] for fl in all_mods_union]
 
-        list_box_group = Frame(wn)
+        list_box_group = Frame(window)
         list_box_group.pack(side='top')
 
         lb = tk.Listbox(list_box_group, height=30)
@@ -714,6 +768,7 @@ class GifClipApp(GuiBuilder):
         def remove_selection():
             ind = lb.curselection()
             key = lb.selection_get()
+
             if len(ind) > 0:
                 ind = ind[0]
 
@@ -729,7 +784,15 @@ class GifClipApp(GuiBuilder):
                     lb.select_set(new_sel)
                 else:
                     # showwarning("Warning")
-                    wn.destroy()
+                    window.destroy()
+
+            windowTitle = f"Config({title}) : {key}"
+            if windowTitle in self.openWindowsDict:
+                tempWind = self.openWindowsDict[windowTitle]
+                if tempWind is not None:
+                    tempWind.destroy()
+                    print(f"Closing window '{windowTitle}'")
+                self.openWindowsDict.pop(windowTitle)
 
         def edit_selected_filter():
             ind = lb.curselection()
@@ -745,7 +808,7 @@ class GifClipApp(GuiBuilder):
                 self._modifier_config(storage_list, name,
                                       collector_instance, title)
 
-        last = Frame(wn)
+        last = Frame(window)
         last.pack()
 
         bt2 = Button(last, text="Edit this", command=edit_selected_filter)
@@ -754,8 +817,10 @@ class GifClipApp(GuiBuilder):
         bt2 = Button(last, text="Remove this", command=remove_selection)
         bt2.pack(side='left')
 
+        return window
+
     def _modifier_config(
-            self, current_mod_param_list: list, current_mod_name: str,
+            self, current_mod_param_list: list, modifierName: str,
             collector_instance,
             title: str
     ):
@@ -763,14 +828,22 @@ class GifClipApp(GuiBuilder):
         #     current_mod_name, current_mod_params = storage_list[store_ind_key]
         # else:
         #     current_mod_name, current_mod_params = store_ind_key, storage_list[store_ind_key]
-        args_description = collector_instance.arguments[current_mod_name]
+        args_description = collector_instance.arguments[modifierName]
         # print(f"Current params: {current_mod_param_list}")
 
         vars = []
         variables_to_check = []
-        wn = tk.Toplevel()
-        wn.title(f"Edit: {current_mod_name}")
+        window = tk.Toplevel()
+        windowTitle = f"Config({title}) : {modifierName}"
+        window.title(windowTitle)
         height = 50  # + 30 * len(args_description)
+
+        "Close existing config window"
+        if windowTitle in self.openWindowsDict:
+            prevWindow = self.openWindowsDict[windowTitle]
+            if prevWindow is not None:
+                prevWindow.destroy()
+        self.openWindowsDict[windowTitle] = window
 
         for ind, ((ar_type, mmin, mmax, nvars, labels), cur_val) in enumerate(
                 zip(args_description, current_mod_param_list)):
@@ -790,7 +863,7 @@ class GifClipApp(GuiBuilder):
                 raise ValueError(f"Unsupported config type: {ar_type}")
 
             inner_vars = []
-            box = Frame(wn)
+            box = Frame(window)
             box.pack(side="top")
 
             if not isinstance(cur_val, (set, list)):
@@ -851,7 +924,7 @@ class GifClipApp(GuiBuilder):
                     # variables_to_check.append((float, ent, cur_inner_val, mmin, mmax))
                 elif ar_type is bool:
                     bt = tk.Checkbutton(
-                        wn, text=cur_inner_label, variable=var_instance)
+                        window, text=cur_inner_label, variable=var_instance)
                     bt.pack()
 
                 if ar_type is not bool:
@@ -927,9 +1000,9 @@ class GifClipApp(GuiBuilder):
 
         def confirm_close():
             confirm()
-            wn.destroy()
+            window.destroy()
 
-        last = Frame(wn)
+        last = Frame(window)
         last.pack()
         # bt1 = Button(last, text="Check values", command=check_values)
         # bt1.pack(side='left')
@@ -938,7 +1011,7 @@ class GifClipApp(GuiBuilder):
         bt2 = Button(last, text="Save & Close", command=confirm_close)
         bt2.pack()
 
-        wn.geometry(f"400x{height}")
+        window.geometry(f"400x{height}")
 
     def quit(self):
         if not self.running_load:
@@ -976,8 +1049,8 @@ class GifClipApp(GuiBuilder):
         lab1 = tk.Label(fr, text=label)
         lab1.pack()
 
-        var = tk.IntVar()
-        var.set(1)
+        varMode = tk.IntVar()
+        varMode.set(1)
 
         # self.variables_list.append(var)
 
@@ -999,37 +1072,37 @@ class GifClipApp(GuiBuilder):
                 1
         ):
             rad1 = tk.Radiobutton(
-                fr, variable=var, text=text, value=num,
+                fr, variable=varMode, text=text, value=num,
                 # validatecommand=validate_spin,
                 # command=toggle_spin,
             )
             rad1.config()
             rad1.pack(side='top', anchor='c')
 
-        sp = tk.Spinbox(
+        spinLayerNum = tk.Spinbox(
             fr, from_=0, to=100,
             # validate='all',
             # validatecommand=validate_spin,
             # invalidcommand=invalid_cmd,
         )
-        sp.pack()
+        spinLayerNum.pack()
         # sp.config(state="readonly")
         # sp.hide()
         # sp.setButtonSymbols
 
-        self.display_config.append([var, sp])
+        self.display_config.append([varMode, spinLayerNum])
 
         group_but = Frame(fr)
         group_but.pack()
 
         def check_preview_mode():
-            mode = int(var.get())
+            mode = int(varMode.get())
             if mode in [1, 2, ]:
-                print("Selected is pipe line.")
+                print("Selected mode is pipeline.")
                 return None
             else:
-                key = int(sp.get())
-                print(f"Selected is layer: {key}")
+                key = int(spinLayerNum.get())
+                print(f"Selected mode is layer: {key}")
                 return key
 
         bt_add = Button(

@@ -18,8 +18,8 @@ import tkinter.filedialog
 import time
 
 
-def parent_replacer(func):
-    """decorator"""
+def empty_parent_replacer(func):
+    """Replaces parent to be root if None"""
 
     @wraps(func)
     def wrapper(self, *a, parent=None, **kw):
@@ -32,19 +32,19 @@ def parent_replacer(func):
 
 
 def params_replacer(func):
-    """decorator"""
+    """Replaces empty params to be dict"""
 
     @wraps(func)
     def wrapper(self, *a, params=None, **kw):
         if params is None:
-            params = {}
+            params = dict()
         return func(self, *a, params=params, **kw)
 
     return wrapper
 
 
 def packing_replacer(func):
-    """decorator"""
+    """Replace Empty packing"""
 
     @wraps(func)
     def wrapper(self, *a, packing=None, **kw):
@@ -109,14 +109,14 @@ class GuiBuilder(ABC):
     def cur_project(self, new_val):
         raise NotImplemented("ABC Property")
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     @packing_replacer
     def add_button(self, text=None, parent=None, packing=None):
         but = Button(parent, text=text)
         but.pack(**packing)
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     @packing_replacer
     def add_frame(self, parent, params=None, packing=None):
@@ -124,7 +124,7 @@ class GuiBuilder(ABC):
         fr.pack(**packing)
         return fr
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     @packing_replacer
     def add_label_frame(self, parent, params=None, packing=None):
@@ -132,14 +132,14 @@ class GuiBuilder(ABC):
         fr.pack(**packing)
         return fr
 
-    @parent_replacer
+    @empty_parent_replacer
     def add_radio_buttons(self):
         raise NotImplemented
 
     def add_variable(self, var):
         self.variables_list.append(var)
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     @packing_replacer
     def make_grid_repeat_objects(self, ob, rows, columns, parent=None, params=None, packing=None):
@@ -156,7 +156,7 @@ class GuiBuilder(ABC):
 
         return self.make_grid(array, parent=parent, packing=packing)
 
-    @parent_replacer
+    @empty_parent_replacer
     @packing_replacer
     def make_grid(self, element_array, parent=None, packing=None):
         """
@@ -337,7 +337,7 @@ class GuiBuilder(ABC):
             ret = askyesno(title, question)
         return ret
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     @packing_replacer
     def add_listbox(self, parent=None, params=None, packing=None):
@@ -345,7 +345,7 @@ class GuiBuilder(ABC):
         menu.pack(**packing)
         return menu
 
-    @parent_replacer
+    @empty_parent_replacer
     @params_replacer
     def add_menu(self, commands, name=None, parent=None, params=None, ):
         # menu = tk.Menu(parent, **params)

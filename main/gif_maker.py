@@ -775,16 +775,16 @@ class GifClipApp(GuiBuilder):
         for ind, ((ar_type, mmin, mmax, nvars, labels), cur_val) in enumerate(
                 zip(args_description, current_mod_param_list)):
             if ar_type is int:
-                var_ob = tk.IntVar
+                varObClass = tk.IntVar
                 height += 50
             elif ar_type is float:
-                var_ob = tk.Variable
+                varObClass = tk.Variable
                 height += 50
             elif ar_type is str:
-                var_ob = tk.StringVar
+                varObClass = tk.StringVar
                 height += 250
             elif ar_type is bool:
-                var_ob = tk.BooleanVar
+                varObClass = tk.BooleanVar
                 height += 50
             else:
                 raise ValueError(f"Unsupported config type: {ar_type}")
@@ -803,7 +803,7 @@ class GifClipApp(GuiBuilder):
                 return None
 
             for inner_ind, (cur_inner_label, cur_inner_val) in enumerate(zip(labels, cur_val)):
-                var_instance = var_ob()
+                var_instance = varObClass()
                 var_instance.set(cur_inner_val)
                 inner_vars.append(var_instance)
 
@@ -824,19 +824,29 @@ class GifClipApp(GuiBuilder):
                         (int, spin, cur_inner_val, mmin, mmax))
 
                 elif ar_type is str:
-                    enum_box = tk.Listbox(group)
+                    # enum_box = tk.Listbox(group)
+                    # radio_box = tk.Radiobutton(group)
                     select_ind = 0
                     for ind, txt in enumerate(mmax):
-                        enum_box.insert(ind, txt)
-                        if mmin == txt:
-                            select_ind = ind
+                        print(f"Adding radio variable: {txt}")
+                        radio_box = tk.Radiobutton(
+                            group, text=txt, variable=var_instance, value=txt)
 
-                    enum_box.pack(side='bottom')
-                    enum_box.select_set(select_ind)
-                    enum_box.bind("<<ListboxSelect>>",
-                                  lambda *x, ind=len(vars), bx=enum_box, ind2=inner_ind: vars[ind][
-                                      ind2].set(
-                                          bx.selection_get()))
+                        if mmin == txt:
+                            # select_ind = ind
+                            radio_box.select()
+                        elif ind == 0:
+                            radio_box.select()
+
+                        print(f"VarOb Value: {var_instance.get()}")
+                        radio_box.pack(side='bottom')
+
+                    # enum_box.pack(side='bottom')
+                    # enum_box.select_set(select_ind)
+                    # enum_box.bind("<<ListboxSelect>>",
+                    #               lambda *x, ind=len(vars), bx=enum_box, ind2=inner_ind: vars[ind][
+                    #                   ind2].set(bx.selection_get())
+                    #               )
 
                     # variables_to_check.append((float, ent, cur_inner_val, mmin, mmax))
                 elif ar_type is bool:
@@ -848,9 +858,6 @@ class GifClipApp(GuiBuilder):
                     label = tk.Label(group, text=cur_inner_label)
                     label.pack()
             vars.append(inner_vars)
-
-        # print("vars")
-        # print(vars)
 
         def check_values():
             # print("Checking")

@@ -73,14 +73,19 @@ class FunctionCollector(metaclass=Singleton):
 
                 assert len(curArg) == 5, \
                     f"Arguments does not have 4 params: {name}, but {len(curArg)}: {curArg}"
-                nvars = curArg[3]
-                if nvars == 1:
-                    assert isinstance(
-                        curArg[4], str), f"Variable should be single string: {name}"
+                varN = curArg[3]
+
+                "Checking Label strings"
+                if varN == 1:
+                    assert isinstance(curArg[4], str), \
+                        f"Variable should be single string: {name}"
                     curArg[4] = [curArg[4]]
                 else:
-                    assert nvars == len(
-                        curArg[4]), f"Variable requires list of strings: {name}, list size:{nvars}"
+                    assert varN == len(
+                        curArg[4]), f"Variable requires list of strings: {name}, list size:{varN}"
+                    for lb in curArg[4]:
+                        assert isinstance(lb, str), \
+                            f"Variable in list be string. Function {name}, got: {lb}"
 
             self._keys[name] = func
             self.arguments[name] = argsFixed
@@ -95,10 +100,21 @@ class FunctionCollector(metaclass=Singleton):
                     raise ValueError
                 else:
                     for i, value in enumerate(default_vals):
+                        varN = argsFixed[i][3]
                         thisType = argsFixed[i][0]
+
                         try:
-                            temp = thisType(value)
-                            validatedDefs.append(temp)
+                            if varN == 1:
+                                temp = thisType(value)
+                                validatedDefs.append(temp)
+                            elif varN > 1:
+                                tmpList = []
+                                for v in value:
+                                    temp = thisType(v)
+                                    tmpList.append(temp)
+
+                                validatedDefs.append(tmpList)
+
                         except Exception as err:
                             print(
                                 f"Failed to convert default parameter to type: {thisType} from: {value} in method: {name}")

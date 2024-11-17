@@ -42,7 +42,8 @@ SequenceModifiers.adder(
 
 @SequenceModifiers.adder(
     'Alpha cutoff',
-    (float, 0, 255, 1, "Threshold")
+    (float, 0, 255, 1, "Threshold"),
+    (None, 50)
 )
 @sequence_adapter
 def cutoff_alpha(sequence, threshold=50):
@@ -61,6 +62,7 @@ def cutoff_alpha(sequence, threshold=50):
     'color blend',
     (int, 0, 255, 3, ["Red", "Green", "Blue"]),
     (float, 0, 1, 1, "Alpha"),
+    (None, [140, 0, 10], 0.7)
 )
 @sequence_adapter
 def color_blend(sequence, color, alpha):
@@ -115,6 +117,7 @@ def crop_image(sequence, left: float, right: float, top: float, bottom: float):
     'resize',
     (float, 0.01, 15, 1, 'Scale Width'),
     (float, 0.01, 15, 1, 'Scale Height'),
+    (None, 0.8, 0.8)
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -148,21 +151,22 @@ def resize(sequence, scale_x=1.0, scale_y=1.0):
 
 @SequenceModifiers.adder(
     'resize ratio',
-    (str, 'outer', ['inner', 'outer'], 1, 'Type'),
+    (str, 'Outer', ['Inner', 'Outer'], 1, 'Type'),
     (int, 50, 10000, 1, "New Dimension"),
+    (None, "Outer", 300)
 )
 @sequence_adapter
 @measure_real_time_decorator
-def resize_ratio(sequence, res_typ='outer', new_dim=150):
+def resize_ratio(sequence, res_typ='Outer', new_dim=150):
     orig = sequence[0]
     h, w, c = orig.shape
     # print(f"Input resize: {h}, {w}")
 
-    if h >= w and res_typ == 'outer':
+    if h >= w and res_typ == 'Outer':
         kwarg = {"height": new_dim}
-    elif w >= h and res_typ == 'outer':
+    elif w >= h and res_typ == 'Outer':
         kwarg = {"width": new_dim}
-    elif h < w and res_typ == 'inner':
+    elif h < w and res_typ == 'Inner':
         kwarg = {"height": new_dim}
     else:
         kwarg = {"width": new_dim}
@@ -259,6 +263,7 @@ def gauss_kernel(kernlen=21, nsig=3):
     "Mean filter",
     (int, 1, 100, 1, "Kernel radius"),
     (int, -1, 3, 1, "Channel"),
+    (None, 2, 0)
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -283,7 +288,8 @@ def mean_filter(sequence, radius=1, channel_ind=0):
 @SequenceModifiers.adder(
     "Median filter",
     (int, 1, 100, 1, "Kernel radius"),
-    (int, -1, 0, 1, "Channel")
+    (int, -1, 0, 1, "Channel"),
+    (None, 2, 0)
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -309,7 +315,8 @@ def median_filter(sequence, dist=1, channel=0):
     'mask color',
     (int, 0, 255, 3, ['Red', 'Green', 'Blue']),
     (float, 1, 30000, 1, 'Distance threshold'),
-    (float, 0.5, 10, 1, 'Distance exponent')
+    (float, 0.5, 10, 1, 'Distance exponent'),
+    (None, [255, 255, 255], 10000, 3)
 )
 @sequence_adapter
 @measure_real_time_decorator
@@ -381,6 +388,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 @SequenceModifiers.adder(
     'extend',
     (int, -500, 500, 2, ['Vertical pixel', 'Horizontal pixel']),
+    (None, [10, 10])
 )
 @sequence_adapter
 @measure_real_time_decorator

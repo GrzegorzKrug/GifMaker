@@ -361,6 +361,66 @@ def clip_sequence(sequence, start: float, stop: float):
 
 
 @SequenceModifiers.adder(
+    'scroll zoom',
+    (float, 1, 100, 1, "Size [%]"),
+    (int, 1, 10000, 1, "Duration frame"),
+    (bool, 0, 1, 1, "Slide Vertical"),
+    (bool, 0, 1, 1, "Repeat sequence"),
+    (bool, 0, 1, 1, "Reverse direction")
+)
+@measure_real_time_decorator
+def scroll(sequence,  fraction: float, frames: int, isVertical: bool, loopSequence: bool, reverseDir: bool):
+    fraction = fraction / 100
+    if frames < 1:
+        frames = 1
+    out = []
+
+    if loopSequence:
+        inds = np.arange(len(sequence), dtype=int)
+        howMany = np.ceil(frames/len(sequence)).astype(int)
+        inds = np.tile(inds, howMany)[:frames]
+        assert len(inds) == frames, "Index list size must equal frames variable"
+    else:
+        inds = np.linspace(0, len(sequence)-1, frames, dtype=int)
+
+    imH, imW, c = sequence[0].shape
+
+    hfrac = np.round(imH*fraction).astype(int)
+    wfrac = np.round(imW*fraction).astype(int)
+    if hfrac < 1:
+        hfrac = 1
+    if wfrac < 1:
+        wfrac = 1
+
+    if isVertical:
+        slide_dist = imH
+    else:
+        slide_dist = imW
+
+    "Last slide is overlaping so removed"
+    slide_interp = np.linspace(0, slide_dist, frames+1, dtype=int)[:-1]
+
+    if reverseDir:
+        slide_interp = -slide_interp
+    roll_ax = 0 if isVertical else 1
+
+    for i, slideVal, sampleI in zip(range(frames), slide_interp, inds):
+        print(f"Scrolling frame i: {i}")
+        fr = sequence[sampleI]
+        fr = np.roll(fr, slideVal, roll_ax,)
+
+        if isVertical:
+            print(f"Vertical clip: {hfrac} of {imH}")
+            fr = fr[:hfrac, :, :]
+        else:
+            fr = fr[:, :wfrac, :]
+
+        out.append(fr)
+
+    return out
+
+
+@SequenceModifiers.adder(
     "snap point to location",
     (float, -100, 100, 2, ["Center X offset", "Center Y offset"]),
     (float, -100, 100, 2, ["Lock To X", "Lock To Y"]),

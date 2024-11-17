@@ -624,6 +624,7 @@ class GifClipApp(GuiBuilder):
             lb.select_set(0)
 
             def add_selection(is_first=False):
+                """Add modifier to active list"""
                 mod_name = lb.selection_get()
                 def_params = collector_instance.get_default(mod_name)
 

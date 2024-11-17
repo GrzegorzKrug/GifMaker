@@ -15,7 +15,8 @@ SequenceModifiers = SequenceModSingleton()
     'sequence sampler',
     (str, 'ratio', ['All',  'Ratio'], 1, 'Mode'),
     (int, 1, 99999, 1, 'N output frames'),
-    (float, 1, 100, 1, "Ratio [%] sample")
+    (float, 1, 100, 1, "Ratio [%] sample"),
+    (None, 'ratio', 60, 70)
 )
 @sequence_adapter
 def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100):

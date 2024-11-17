@@ -29,7 +29,8 @@ class FunctionCollector(metaclass=Singleton):
         self.type_ = "base"
         # Name-function relation
 
-        self.arguments = {}
+        self.arguments = dict()
+        self.defaults = dict()
 
         # Dict with variables types, limits
         # Type, minval, maxval, Number of vars, Labels
@@ -39,11 +40,16 @@ class FunctionCollector(metaclass=Singleton):
         Function to register function for usage.
         arg - Tuple
                 type: python keyword
-                min: number
-                max: number
+                ar1: number min / str: default
+                ar2: number max / list str [options]
                 argnumber: int
-                label: str (if argnumer==1), else list of strings
+                label: str (if argnumebr==1), else list of strings
                 ]
+        defaultArgTuple - Tuple (optional)
+                None: Literal None (must be provided to mark default)
+                arg0Type: type
+                ...
+                argNType: type
         """
         def wrapper(func):
             name = fkey.lower()
@@ -52,22 +58,56 @@ class FunctionCollector(metaclass=Singleton):
                 raise KeyError(f"Function already registered as: {name}")
             # if len(args) != 3:
             #     raise ValueError(f"3 params required to register filter: {fkey}")
-            args_ = list(args)
+            argsFixed = list(args)
+            hasDefault = False
+            default_vals = None
 
-            for i, a in enumerate(args_):
-                a = list(a)
-                args_[i] = a
-                assert len(a) == 5, f"Arguments does not have 4 params: {name}, but {a}"
-                nvars = a[3]
+            if len(argsFixed) > 0 and isinstance(argsFixed[-1][0], (type(None), )):
+                hasDefault = True
+                default_vals = argsFixed[-1][1:]
+                argsFixed = argsFixed[:-1]
+
+            for i, curArg in enumerate(argsFixed):
+                curArg = list(curArg)
+                argsFixed[i] = curArg
+
+                assert len(curArg) == 5, \
+                    f"Arguments does not have 4 params: {name}, but {len(curArg)}: {curArg}"
+                nvars = curArg[3]
                 if nvars == 1:
-                    assert isinstance(a[4], str), f"Variable should be single string: {name}"
-                    a[4] = [a[4]]
+                    assert isinstance(
+                        curArg[4], str), f"Variable should be single string: {name}"
+                    curArg[4] = [curArg[4]]
                 else:
                     assert nvars == len(
-                            a[4]), f"Variable requires list of strings: {name}, list size:{nvars}"
+                        curArg[4]), f"Variable requires list of strings: {name}, list size:{nvars}"
 
             self._keys[name] = func
-            self.arguments[name] = args_
+            self.arguments[name] = argsFixed
+            if hasDefault:
+                areDefValidType = True
+                validatedDefs = []
+
+                if len(argsFixed) != len(default_vals):
+                    print(
+                        f"Default value miss match from parameters for: {name}, Arg required: {len(argsFixed)} but provided: {len(default_vals)}")
+                    areDefValidType = False
+                    raise ValueError
+                else:
+                    for i, value in enumerate(default_vals):
+                        thisType = argsFixed[i][0]
+                        try:
+                            temp = thisType(value)
+                            validatedDefs.append(temp)
+                        except Exception as err:
+                            print(
+                                f"Failed to convert default parameter to type: {thisType} from: {value} in method: {name}")
+                            areDefValidType = False
+                            raise ValueError(err)
+                            break
+
+                if areDefValidType:
+                    self.defaults[name] = validatedDefs
 
             # print(f"Register filter: {name}")
 
@@ -81,6 +121,10 @@ class FunctionCollector(metaclass=Singleton):
         return wrapper
 
     def get_default(self, fkey):
+        "Gets defult params"
+        if fkey in self.defaults:
+            return self.defaults[fkey].copy()
+
         params = []
         for dtype, mmin, mmax, nvars, _ in self.arguments[fkey]:
             if nvars == 1:

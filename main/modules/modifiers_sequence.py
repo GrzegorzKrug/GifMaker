@@ -13,14 +13,12 @@ SequenceModifiers = SequenceModSingleton()
 
 @SequenceModifiers.adder(
     'sequence sampler',
-    (str, 'all', ['all', 'linear', 'ratio'], 1, 'Mode'),
+    (str, 'ratio', ['All',  'Ratio'], 1, 'Mode'),
     (int, 1, 99999, 1, 'N output frames'),
-    (float, -999, 999, 1, 'Non linear variable'),
-    (float, 0, 500, 1, "Ratio [%] sample")
-
+    (float, 1, 100, 1, "Ratio [%] sample")
 )
 @sequence_adapter
-def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ratio_value=100):
+def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100):
     # print(type(im_ob), type(im_ob) is np.ndarray)
     if len(image_sequence) == 1:
         frame = np.array(image_sequence[0], dtype=np.uint8)
@@ -30,15 +28,10 @@ def sequence_sampler(image_sequence, mode='linear', frames_n=1, mode_value=0, ra
         # frame = np.array(im_ob, dtype=np.uint8)
         frames = [image_sequence.copy() for _ in range(frames_n)]
 
-    elif mode == "all":
+    elif mode == "All":
         frames = [np.array(fr, dtype=np.uint8) for fr in image_sequence]
 
-    elif mode == 'linear':
-        indexes = np.linspace(0, len(image_sequence), frames_n + 1)[:-1]
-        indexes = np.floor(indexes).astype(int)
-        frames = [image_sequence[ind] for ind in indexes]
-
-    elif mode == 'ratio':
+    elif mode == 'Ratio':
         ratio_frames = (ratio_value / 100) * len(image_sequence)
         ratio_frames = np.clip(ratio_frames, 1, np.inf).round().astype(int)
         indexes = np.linspace(0, len(image_sequence), ratio_frames + 1)[:-1]

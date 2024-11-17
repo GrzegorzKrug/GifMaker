@@ -35,6 +35,16 @@ class FunctionCollector(metaclass=Singleton):
         # Type, minval, maxval, Number of vars, Labels
 
     def adder(self, fkey, *args):
+        """
+        Function to register function for usage.
+        arg - Tuple
+                type: python keyword
+                min: number
+                max: number
+                argnumber: int
+                label: str (if argnumer==1), else list of strings
+                ]
+        """
         def wrapper(func):
             name = fkey.lower()
             if name in self._keys:

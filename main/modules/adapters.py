@@ -28,9 +28,13 @@ def sequence_adapter(func):
 
 
 def image_adapter(func):
-    """Splits input to image ob"""
+    """
+    Decorator for functions that accept single image input.
+    """
+
     @wraps(wrapped=func)
     def wrapper(source, *a, **kw):
+
         if isinstance(source, np.ndarray) and len(source.shape) == 4:
             "4D numpy"
             res_list = [func(img, *a, **kw) for img in source]

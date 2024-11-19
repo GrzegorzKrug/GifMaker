@@ -4,7 +4,7 @@ from yasiu_native.time import measure_real_time_decorator
 
 from modules.adapters import sequence_adapter
 from modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes
-from modules.math_functions import moving_average
+from yasiu_math.convolve import moving_average
 from modules.collectors import SequenceModSingleton
 
 

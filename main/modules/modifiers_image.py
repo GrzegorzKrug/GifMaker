@@ -9,12 +9,11 @@ import imutils
 
 from modules.adapters import image_adapter, sequence_adapter
 from modules.collectors import SequenceModSingleton
-from yasiu_native.time import measure_real_time_decorator
-
-from yasiu_image.image import squerify
-from yasiu_image.filters import mirror
-
 from modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes, blend_region
+
+from yasiu_native.time import measure_real_time_decorator
+from yasiu_image.modifiers import squerify
+from yasiu_image.filters import mirrorAxis
 
 
 def layer_validator(fn):
@@ -29,13 +28,14 @@ SequenceModifiers = SequenceModSingleton()
 
 "=== IMPORTED WRAPS === "
 
-mirror = image_adapter(mirror)
+mirrorAxis = image_adapter(mirrorAxis)
 SequenceModifiers.adder(
     "mirror",
-    (float, 0, 1, 1, 'pos'),
-    (int, 0, 1, 1, 'axis',),
+    (bool, 0, 1, 1, 'Vertical Mirror'),
+    (float, 0, 1, 1, 'Position'),
     (bool, 0, 1, 1, 'Flip'),
-)(mirror)
+    (None, True, 0.5,  False)
+)(mirrorAxis)
 
 "=== NEW FUNCTIONS ==="
 
@@ -392,7 +392,7 @@ def erode_dilate(sequence, dilate=False, repeat=1, radius=1, channel_ind=0):
 )
 @sequence_adapter
 @measure_real_time_decorator
-def extend(sequence, increase):
+def extend(sequence, increase: tuple[float, float]):
     h, w, c = sequence[0].shape
 
     offset_y, offset_x = np.abs(increase)
@@ -480,7 +480,7 @@ def stack_channels_as_rgb(channels_list, labels, size=1.2):
 @image_adapter
 def squerify_interace(image, val):
     val /= 100
-    new_img = squerify(image, val, type_="clip")
+    new_img = squerify(image, val)
     return new_img
 
 
@@ -498,6 +498,3 @@ if __name__ == "__main__":
     cv2.waitKey()
 
     # cv2.imwrite(f"..{os.path.sep}test.png", aurora)
-
-# print("IMPORTED IMAGE MODS:")
-# print(SequenceModifiers)

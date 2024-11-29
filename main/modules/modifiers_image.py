@@ -479,7 +479,7 @@ def stack_channels_as_rgb(channels_list, labels, size=1.2):
 )
 @image_adapter
 def squerify_interace(image, val):
-    val /= 100
+    val /= 100.0
     new_img = squerify(image, val)
     return new_img
 

@@ -52,6 +52,7 @@ class FunctionCollector(metaclass=Singleton):
                 argNType: type
         """
         def wrapper(func):
+            "Checking Wrapper?"
             name = fkey.lower()
             if name in self._keys:
                 # print(f"{self._keys.keys()}")

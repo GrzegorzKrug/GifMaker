@@ -469,6 +469,7 @@ class GifClipApp(GuiBuilder):
             # layer_frames = layer.orig_frames
             # layer_frames = self.apply_mods_to_sequence(layer_frames, layer.filters_list)
             # layer.output_frames = layer_frames
+            print(f"Layer Application: {layer}")
             layer.apply_mods()
 
         self.running_load = False
@@ -825,10 +826,6 @@ class GifClipApp(GuiBuilder):
             collector_instance,
             title: str
     ):
-        # if isinstance(storage_list, list):
-        #     current_mod_name, current_mod_params = storage_list[store_ind_key]
-        # else:
-        #     current_mod_name, current_mod_params = store_ind_key, storage_list[store_ind_key]
         args_description = collector_instance.arguments[modifierName]
         # print(f"Current params: {current_mod_param_list}")
 
@@ -898,31 +895,22 @@ class GifClipApp(GuiBuilder):
                         (int, spin, cur_inner_val, mmin, mmax))
 
                 elif ar_type is str:
-                    # enum_box = tk.Listbox(group)
-                    # radio_box = tk.Radiobutton(group)
-                    select_ind = 0
+                    curVal = var_instance.get().lower()
+                    print(f"VarOb Value before set: {var_instance.get()}")
                     for ind, txt in enumerate(mmax):
                         print(f"Adding radio variable: {txt}")
                         radio_box = tk.Radiobutton(
                             group, text=txt, variable=var_instance, value=txt)
+                        print(f"Check: mmin: {mmin}, txt: {txt}, ind: {ind}")
+                        print(type(mmin), type(txt))
 
-                        if mmin == txt:
-                            # select_ind = ind
+                        if curVal == txt.lower():
                             radio_box.select()
                         elif ind == 0:
                             radio_box.select()
 
-                        print(f"VarOb Value: {var_instance.get()}")
                         radio_box.pack(side='bottom')
 
-                    # enum_box.pack(side='bottom')
-                    # enum_box.select_set(select_ind)
-                    # enum_box.bind("<<ListboxSelect>>",
-                    #               lambda *x, ind=len(vars), bx=enum_box, ind2=inner_ind: vars[ind][
-                    #                   ind2].set(bx.selection_get())
-                    #               )
-
-                    # variables_to_check.append((float, ent, cur_inner_val, mmin, mmax))
                 elif ar_type is bool:
                     bt = tk.Checkbutton(
                         window, text=cur_inner_label, variable=var_instance)

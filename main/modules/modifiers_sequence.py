@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from yasiu_native.time import measure_real_time_decorator
 
-from modules.adapters import sequence_adapter
+from modules.adapters import sequence_adapter, logging_wrapper
 from modules.image_helpers import _get_clip_dst_indexes, _get_clip_src_indexes
 from yasiu_math.convolve import moving_average
 from modules.collectors import SequenceModSingleton
@@ -13,14 +13,16 @@ SequenceModifiers = SequenceModSingleton()
 
 @SequenceModifiers.adder(
     'sequence sampler',
-    (str, 'ratio', ['All',  'Ratio'], 1, 'Mode'),
+    (str, 'Ratio', ['All',  'Frames', 'Ratio'], 1, 'Mode'),
     (int, 1, 99999, 1, 'N output frames'),
     (float, 1, 100, 1, "Ratio [%] sample"),
     (None, 'Ratio', 60, 70)
 )
 @sequence_adapter
+# @logging_wrapper
 def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100):
-    # print(type(im_ob), type(im_ob) is np.ndarray)
+
+    mode = mode.lower()
     if len(image_sequence) == 1:
         frame = np.array(image_sequence[0], dtype=np.uint8)
         frames = [frame for _ in range(frames_n)]
@@ -29,12 +31,16 @@ def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100)
         # frame = np.array(im_ob, dtype=np.uint8)
         frames = [image_sequence.copy() for _ in range(frames_n)]
 
-    elif mode == "All":
+    elif mode == "all":
         frames = [np.array(fr, dtype=np.uint8) for fr in image_sequence]
 
-    elif mode == 'Ratio':
-        ratio_frames = (ratio_value / 100) * len(image_sequence)
-        ratio_frames = np.clip(ratio_frames, 1, np.inf).round().astype(int)
+    elif mode == 'ratio' or mode == "frames":
+        if mode == "frames":
+            ratio_frames = np.clip(frames_n, 1, np.inf).round().astype(int)
+        else:
+            ratio_frames = (ratio_value / 100) * len(image_sequence)
+            ratio_frames = np.clip(ratio_frames, 1, np.inf).round().astype(int)
+
         indexes = np.linspace(0, len(image_sequence), ratio_frames + 1)[:-1]
         indexes = np.floor(indexes).astype(int)
         frames = [image_sequence[ind] for ind in indexes]

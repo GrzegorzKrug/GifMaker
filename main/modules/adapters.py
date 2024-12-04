@@ -50,3 +50,16 @@ def image_adapter(func):
         return res
 
     return wrapper
+
+
+def logging_wrapper(func):
+    """Print Logged function call with arguments"""
+    @wraps(wrapped=func)
+    def wrapper(*a, **kw):
+        # if isinstance(a, tuple(list, tuple)):
+        #     text = f"{len(a[0])}"
+        print(f"== FUNCTION: {func.__name__}: ({a[0].shape} ,*{a[1:]}, **{kw})")
+
+        return func(*a, **kw)
+
+    return wrapper

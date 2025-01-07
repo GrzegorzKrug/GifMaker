@@ -13,14 +13,39 @@ SequenceModifiers = SequenceModSingleton()
 
 @SequenceModifiers.adder(
     'sequence sampler',
-    (str, 'Ratio', ['All',  'Frames', 'Ratio'], 1, 'Mode'),
+    (str, 'Ratio', ['All', 'Frames', 'Ratio'], 1, 'Mode'),
     (int, 1, 99999, 1, 'N output frames'),
     (float, 1, 100, 1, "Ratio [%] sample"),
     (None, 'Ratio', 60, 70)
 )
 @sequence_adapter
 # @logging_wrapper
-def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100):
+def sequence_sampler(image_sequence, mode='ratio', frames_n=1, ratio_value=100):
+    """
+    _summary_
+
+    Args:
+        image_sequence: `_type_`
+            _description_
+
+        mode: `str` (optional), defaults to 'ratio'
+            _description_
+
+        frames_n: `int` (optional), defaults to 1
+            _description_
+
+        ratio_value: `int` (optional), defaults to 100
+            _description_
+
+
+    Raises:
+        ValueError: _description_
+
+
+    Returns:
+        _type_: _description_
+
+    """
 
     mode = mode.lower()
     if len(image_sequence) == 1:
@@ -57,7 +82,7 @@ def sequence_sampler(image_sequence, mode='ratio', frames_n=1,  ratio_value=100)
     (None, 1),
 )
 def repeat_sequence(im_ob, repeat):
-    frames = [fr for _ in range(repeat+1) for fr in im_ob]
+    frames = [fr for _ in range(repeat + 1) for fr in im_ob]
 
     return frames
 
@@ -103,19 +128,19 @@ def cycle_slide(sequence: list, angle: float):
     yend = abs(height * sn)
     xend = abs(width * cs)
 
-    moded_angle = angle if angle <= 180 else angle-180
+    moded_angle = angle if angle <= 180 else angle - 180
     # Reduce circle to half circ for single if statment check.
-    if not (45 <= moded_angle < (90+45)):
+    if not (45 <= moded_angle < (90 + 45)):
         "Horiz movement is on edges"
         is_horiz = True
 
     if is_horiz:
-        end_compensation_A = abs(np.round(height*sn).astype(int))
+        end_compensation_A = abs(np.round(height * sn).astype(int))
         if 180 < angle < 270 or 0 < angle < 90:
             end_compensation_B = end_compensation_A
             end_compensation_A = 0
     else:
-        end_compensation_B = abs(np.round(width*cs).astype(int))
+        end_compensation_B = abs(np.round(width * cs).astype(int))
         if 0 < angle < 90 or 180 < angle < 270:
             end_compensation_A = end_compensation_B
             end_compensation_B = 0
@@ -134,13 +159,13 @@ def cycle_slide(sequence: list, angle: float):
 
     "Define full cycle move on axis"
     if is_horiz:
-        if (90+45) <= angle < (180+45):
+        if (90 + 45) <= angle < (180 + 45):
             # LEFT MOVE
             xsteps = np.linspace(0, width, seq_size)
         else:
             xsteps = np.linspace(width, 0, seq_size)
     else:
-        if (0+45) <= angle < (90+45):
+        if (0 + 45) <= angle < (90 + 45):
             ysteps = np.linspace(0, height, seq_size)
         else:
             ysteps = np.linspace(height, 0, seq_size)
@@ -372,7 +397,7 @@ def clip_sequence(sequence, start: float, stop: float):
     (None, 5, 100, True, False, True)
 )
 @measure_real_time_decorator
-def scroll(sequence,  fraction: float, frames: int, isVertical: bool, loopSequence: bool, reverseDir: bool):
+def scroll(sequence, fraction: float, frames: int, isVertical: bool, loopSequence: bool, reverseDir: bool):
     fraction = fraction / 100
     if frames < 1:
         frames = 1
@@ -380,16 +405,16 @@ def scroll(sequence,  fraction: float, frames: int, isVertical: bool, loopSequen
 
     if loopSequence:
         inds = np.arange(len(sequence), dtype=int)
-        howMany = np.ceil(frames/len(sequence)).astype(int)
+        howMany = np.ceil(frames / len(sequence)).astype(int)
         inds = np.tile(inds, howMany)[:frames]
         assert len(inds) == frames, "Index list size must equal frames variable"
     else:
-        inds = np.linspace(0, len(sequence)-1, frames, dtype=int)
+        inds = np.linspace(0, len(sequence) - 1, frames, dtype=int)
 
     imH, imW, c = sequence[0].shape
 
-    hfrac = np.round(imH*fraction).astype(int)
-    wfrac = np.round(imW*fraction).astype(int)
+    hfrac = np.round(imH * fraction).astype(int)
+    wfrac = np.round(imW * fraction).astype(int)
     if hfrac < 1:
         hfrac = 1
     if wfrac < 1:
@@ -401,7 +426,7 @@ def scroll(sequence,  fraction: float, frames: int, isVertical: bool, loopSequen
         slide_dist = imW
 
     "Last slide is overlaping so removed"
-    slide_interp = np.linspace(0, slide_dist, frames+1, dtype=int)[:-1]
+    slide_interp = np.linspace(0, slide_dist, frames + 1, dtype=int)[:-1]
 
     if reverseDir:
         slide_interp = -slide_interp
@@ -503,8 +528,54 @@ def snap_point_to_location(sequence, offset_start=None, offset_end=None, start_f
 def track_template_in_sequence(
         sequence, offset_start, start_fr, window_fraction,
         smoothing_radius, smooth_exp=0,
+        matchMode="SQ",
+        colorMode="RGB",
 
 ):
+    """
+    _summary_
+
+    Args:
+        sequence: `_type_`
+            _description_
+
+        offset_start: `_type_`
+            _description_
+
+        start_fr: `_type_`
+            _description_
+
+        window_fraction: `_type_`
+            _description_
+
+        smoothing_radius: `_type_`
+            _description_
+
+        smooth_exp: `int` (optional), defaults to 0
+            _description_
+
+        matchMode: `str` (optional), defaults to "SQ"
+            "Evaluation method"
+            SQ - squared diff
+
+            Corr - Correlation
+
+            COEF - Coefficient (subtracts mean)
+
+        colorMode: `str` (optional), defaults to "RGB"
+            "Convert frames before matching"
+            RGB
+
+            HSV
+
+
+    Returns:
+        _type_: _description_
+
+    """
+    colorMode = colorMode.lower()
+    matchMode = matchMode.lower()
+
     h, w, c = sequence[0].shape
     point_start = (
         np.array([offset_start[0] / 200, offset_start[1] / 200], dtype=float) + 0.5)
@@ -519,16 +590,32 @@ def track_template_in_sequence(
 
     template = frame[point_start[1] - window_size // 2:point_start[1] + window_size // 2 + 1,
                      point_start[0] - window_size // 2:point_start[0] + window_size // 2 + 1]
-    # plt.imshow(template)
-    # plt.show()
-    # output = []
+    if colorMode == "hsv":
+        template = template.copy()
+        temp = cv2.cvtColor(template, cv2.COLOR_RGB2HSV)
+        # print(template.shape, temp.shape)
+        template[:, :, :3] = temp
+
     posx = []
     posy = []
     for fr in sequence:
-        res = cv2.matchTemplate(fr, template, method=cv2.TM_SQDIFF)
-        # res = cv2.normalize(res, res, 0, 1, cv2.NORM_MINMAX, -1)
+        if colorMode == "hsv":
+            fr = fr.copy()
+            temp = cv2.cvtColor(fr, cv2.COLOR_RGB2HSV)
+            fr[:, :, :3] = temp
 
-        flat_ind = np.argmin(res)
+        if matchMode == "corr":
+            res = cv2.matchTemplate(fr, template, method=cv2.TM_CCORR)
+            flat_ind = np.argmax(res)
+
+        elif matchMode == "coef":
+            res = cv2.matchTemplate(fr, template, method=cv2.TM_CCOEFF)
+            flat_ind = np.argmax(res)
+
+        else:
+            res = cv2.matchTemplate(fr, template, method=cv2.TM_SQDIFF)
+            flat_ind = np.argmin(res)
+
         x, y = np.unravel_index(flat_ind, res.shape)
 
         posx.append(y)

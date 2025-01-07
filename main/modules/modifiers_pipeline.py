@@ -34,17 +34,20 @@ def merge_to_new(output_frames, layer_dict, dst_layer_key, base_key, overlay_key
 @PipeLineModifiers.adder(
     "Snap pic to Tracked region",
     (int, 0, 100, 1, "Base layer key"),
-    (int, 0, 100, 1, "Overlay layer key"),
+    (int, 0, 100, 1, "Overlay key"),
     (int, 0, 100, 1, "Output layer key"),
-    (float, -100, 100, 2, ["Sample X offset", "Sample Y offset"]),
-    (float, -100, 100, 2, ["Target X offset", "Target Y offset"]),
+    (float, -100, 100, 2, ["Sample X offset[%]", "Sample Y offset[%]"]),
+    (float, -100, 100, 2, ["Target X offset[%]", "Target Y offset[%]"]),
 
-    (float, 0, 100, 1, "Frame position"),
-    (float, 0, 50, 1, "Template size"),
+    (float, 0, 100, 1, "Template frame[%]"),
+    (float, 0, 50, 1, "Template size[%]"),
     (int, 0, 100, 1, "Smoothing distance"),
     (float, 0, 100, 1, "Smoothing kernel exponent"),
-    (float, 0, 100, 1, "Overlay scale"),
-    (bool, 0, 1, 1, "Debug")
+    (float, 0, 100, 1, "[Unused]"),
+    (str, "RGB", ["RGB", "HSV"], 1, "Color Mode"),
+    (str, "SQ", ["SQ", "Corr", "Coef"], 1, "Matching method"),
+    (bool, 0, 1, 1, "Debug"),
+    (None, 0, 1, 2, [0, 0], [0, 0], 0, 20, 2, 1, 0, "RGB", "SQ", 0),
 )
 def snap_to_tracked_region(output_frames, layer_dict,
                            base_layer_key, overlay_key, dst_layer_key,
@@ -55,6 +58,8 @@ def snap_to_tracked_region(output_frames, layer_dict,
                            smoothing_frames=None,
                            smoothing_val=1,
                            overlay_scale=1,
+                           colorMode="RGB",
+                           matchMode="SQ",
                            debug=False,
                            ):
     if dst_layer_key in layer_dict:
@@ -71,8 +76,9 @@ def snap_to_tracked_region(output_frames, layer_dict,
     offset_end = (np.array(offset_end) / 200 * (w, h)).round().astype(int)
 
     posx, posy, template, window_pixel_size = track_template_in_sequence(
-        base.output_frames, offset_start, start_fr, window_fraction,
-        smoothing_frames, smoothing_val
+        base.output_frames, offset_start, start_fr, window_fraction / 100,
+        smoothing_frames, smoothing_val,
+        colorMode=colorMode, matchMode=matchMode,
     )
     # snap_point_to_location(sequence, offset_start=None, offset_end=None, start_fr=None,
 
@@ -86,7 +92,7 @@ def snap_to_tracked_region(output_frames, layer_dict,
         overlay_frames = [over_frame] * len(seq)
     else:
         overlay_frames = sequence_sampler(
-            overlay.output_frames, mode='linear', frames_n=len(seq))
+            overlay.output_frames, mode='frames', frames_n=len(seq))
 
     if debug:
         height, width, *_ = template.shape
@@ -120,6 +126,7 @@ def snap_to_tracked_region(output_frames, layer_dict,
 
     dst_layer.orig_frames = seq
     dst_layer.apply_mods()
+    print("Pipe has finished")
 
 
 @PipeLineModifiers.adder(
@@ -128,7 +135,7 @@ def snap_to_tracked_region(output_frames, layer_dict,
 
 )
 def merge_to_output(output_frames, layer_dict, overlay_key):
-    return output_frames+layer_dict[overlay_key].output_frames
+    return output_frames + layer_dict[overlay_key].output_frames
 
 
 @PipeLineModifiers.adder(

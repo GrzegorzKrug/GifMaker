@@ -101,7 +101,7 @@ def windowHashingDecorator(func):
     Hash window and reoopen
     """
     @wraps(func)
-    def wrapper(self,  layer_key=None, modifierName: str = None):
+    def wrapper(self, layer_key=None, modifierName: str = None):
         if layer_key is None:
             newWindow = func(self)
             cur_hash = self.hashAppWindows("pipe")
@@ -1038,8 +1038,8 @@ class GifClipApp(GuiBuilder):
         lab1 = tk.Label(fr, text=label)
         lab1.pack()
 
-        varMode = tk.IntVar()
-        varMode.set(1)
+        varIntMode = tk.IntVar()
+        varIntMode.set(1)
 
         # self.variables_list.append(var)
 
@@ -1061,7 +1061,7 @@ class GifClipApp(GuiBuilder):
                 1
         ):
             rad1 = tk.Radiobutton(
-                fr, variable=varMode, text=text, value=num,
+                fr, variable=varIntMode, text=text, value=num,
                 # validatecommand=validate_spin,
                 # command=toggle_spin,
             )
@@ -1079,13 +1079,13 @@ class GifClipApp(GuiBuilder):
         # sp.hide()
         # sp.setButtonSymbols
 
-        self.display_config.append([varMode, spinLayerNum])
+        self.display_config.append([varIntMode, spinLayerNum])
 
         group_but = Frame(fr)
         group_but.pack()
 
         def check_preview_mode():
-            mode = int(varMode.get())
+            mode = int(varIntMode.get())
             if mode in [1, 2, ]:
                 print("Selected mode is pipeline.")
                 return None
@@ -1149,18 +1149,23 @@ class GifClipApp(GuiBuilder):
         top.geometry("250x100")
         top.title("Export settings")
 
+        layerIndex = tk.IntVar()
+        layerIndex.set(max(self.layers_dict.keys()))
+        layerSpinBox = tk.Spinbox(top, from_=0, to=15, textvariable=layerIndex, increment=1)
+        layerSpinBox.pack()
+
         duration_var = tk.IntVar()
         duration_var.set(45)
         rgba_mode_var = tk.BooleanVar()
-        rgba_mode_var.set(True)
+        rgba_mode_var.set(False)
 
         settings_grid = tk.Frame(top)
         settings_grid.pack(side='top')
+
         array = (
             [
                 (tk.Label, dict(text="Duration [ms]")),
-                (tk.Spinbox, dict(from_=10, to=150,
-                                  textvariable=duration_var, increment=5)),
+                (tk.Spinbox, dict(from_=10, to=150, textvariable=duration_var, increment=5)),
             ],
             [
                 (tk.Label, dict(text="Transparent")),
@@ -1177,6 +1182,7 @@ class GifClipApp(GuiBuilder):
             dec = {}
             dec['use_rgba'] = bool(int(rgba_mode_var.get()))
             dec['duration'] = int(duration_var.get())
+            dec['layer'] = int(layerIndex.get())
             self.exp_settings = dec
             self.export()
 
@@ -1199,15 +1205,22 @@ class GifClipApp(GuiBuilder):
     def _export_thread(self):
         t0 = time.time()
         path = self.last_export_path
-        frames = self.output_frames.copy()
 
         exp_settings = self.exp_settings
         print(f"Export settings: {exp_settings}")
 
         # loop = exp_settings['loop']
         duration = exp_settings['duration']
+        layerInd = exp_settings['layer']
         # disposal = exp_settings['disposal']
         use_rgba = exp_settings['use_rgba']
+
+        # frames = self.output_frames.copy()
+        print(f"Layers ({layerInd}): {self.layers_dict.keys()}")
+        layer = self.layers_dict[layerInd]
+        print(layer)
+        layer: Layer
+        frames = layer.output_frames
 
         if use_rgba:
             pil_frames = [Image.fromarray(fr).convert("RGBA") for fr in frames]

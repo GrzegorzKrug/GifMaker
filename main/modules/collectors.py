@@ -59,7 +59,12 @@ class FunctionCollector(metaclass=Singleton):
                 raise KeyError(f"Function already registered as: {name}")
             # if len(args) != 3:
             #     raise ValueError(f"3 params required to register filter: {fkey}")
+
             argsFixed = list(args)
+            # Class, Min, Max, 1, Label
+            # or
+            # Class, Min, Max, 1>, List of Strings
+
             hasDefault = False
             default_vals = None
 
@@ -74,19 +79,27 @@ class FunctionCollector(metaclass=Singleton):
 
                 assert len(curArg) == 5, \
                     f"Arguments does not have 4 params: {name}, but {len(curArg)}: {curArg}"
-                varN = curArg[3]
 
-                "Checking Label strings"
-                if varN == 1:
-                    assert isinstance(curArg[4], str), \
-                        f"Variable should be single string: {name}"
-                    curArg[4] = [curArg[4]]
+                if type(curArg[3]) is list:
+                    hasExtraLabels = True
                 else:
-                    assert varN == len(
-                        curArg[4]), f"Variable requires list of strings: {name}, list size:{varN}"
-                    for lb in curArg[4]:
-                        assert isinstance(lb, str), \
-                            f"Variable in list be string. Function {name}, got: {lb}"
+                    hasExtraLabels = False
+                    varAm = int(curArg[3])
+
+                if hasExtraLabels:
+                    pass
+                else:
+                    "Checking Label strings"
+                    if varAm == 1:
+                        assert isinstance(curArg[4], str), \
+                            f"Variable should be single string: {name}"
+                        curArg[4] = [curArg[4]]
+                    else:
+                        assert varAm == len(
+                            curArg[4]), f"Variable requires list of strings for function: `{name}`, list size:{varAm}"
+                        for lb in curArg[4]:
+                            assert isinstance(lb, str), \
+                                f"Variable in list be string. Function {name}, got: {lb}"
 
             self._keys[name] = func
             self.arguments[name] = argsFixed
@@ -101,14 +114,14 @@ class FunctionCollector(metaclass=Singleton):
                     raise ValueError
                 else:
                     for i, value in enumerate(default_vals):
-                        varN = argsFixed[i][3]
+                        varAm = argsFixed[i][3]
                         thisType = argsFixed[i][0]
 
                         try:
-                            if varN == 1:
+                            if varAm == 1:
                                 temp = thisType(value)
                                 validatedDefs.append(temp)
-                            elif varN > 1:
+                            elif varAm > 1:
                                 tmpList = []
                                 for v in value:
                                     temp = thisType(v)

@@ -1031,6 +1031,13 @@ class GifClipApp(GuiBuilder):
         Preview Pipe step
         Preview Output
         """
+        """
+            TODO:                        
+            REMOVE Output Section,
+            Edit pipeline to Show layer ouput and Add Piple Mods.
+            Make arch that specify Order of layer pipe filters.
+            Pipeline mods specify Layers Pre post Effect.
+         """
 
         fr = tk.Frame(parent, bg="#0F0")
         fr.pack()

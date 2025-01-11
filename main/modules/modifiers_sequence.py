@@ -88,6 +88,24 @@ def repeat_sequence(im_ob, repeat):
 
 
 @SequenceModifiers.adder(
+    'rotate',
+    (str, "L", ["L", "R", "180"], 1, "Rotate")
+)
+def rotate(sequence, rotate="L"):
+    new_sequence = [fr.copy() for fr in sequence]
+    for i, im in enumerate(new_sequence):
+        if rotate.lower() == "l":
+            # new_sequence[i] = im.T
+            new_sequence[i] = np.rot90(im, 1)
+        elif rotate.lower() == "r":
+            new_sequence[i] = np.rot90(im, 3)
+        else:
+            new_sequence[i] = np.rot90(im, 2)
+
+    return new_sequence
+
+
+@SequenceModifiers.adder(
     'reverse',
     (bool, 0, 1, 1, "Include Reversed")
 )
